@@ -3,7 +3,7 @@ sys.path.append('/Users/kinge2/repos/')
 import numpy as np
 import math
 import random
-from fears.utils import plotter, pharm, fitness, dir_manager
+from seascapes_figures.utils import plotter, pharm, fitness, dir_manager
 
 class Population:
     

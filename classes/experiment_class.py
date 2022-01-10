@@ -1,5 +1,5 @@
-from fears.classes.population_class import Population
-from fears.utils import plotter, dir_manager, fitness
+from seascapes_figures.classes.population_class import Population
+from seascapes_figures.utils import plotter, dir_manager, fitness
 import numpy as np
 import pandas as pd
 # import warnings
