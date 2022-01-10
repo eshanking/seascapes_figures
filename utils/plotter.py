@@ -10,6 +10,7 @@ import scipy.stats
 from seascapes_figures.utils import dir_manager, fitness
 # from fears.utils.experiment_class import Experiment
 from matplotlib.collections import LineCollection
+from matplotlib.colors import to_rgba
 import networkx as nx
 from labellines import labelLine
 
@@ -531,6 +532,11 @@ def plot_landscape(p,conc=10**0,
                    cbax=None,
                    cblabel='',
                    cbloc = [0.1,0.8,0.3,0.5],
+                   network_only=False, # plots just the network without any fitness data
+                   edge_color='gray',
+                   plot_sub_network=False,
+                   sub_network=None,
+                   sub_network_color='white',
                    **kwargs):
     """
     Plots a graph representation of this landscape on the current matplotlib figure.
@@ -555,6 +561,9 @@ def plot_landscape(p,conc=10**0,
     if ignore_zero:
         fitness_t = [f==0 for f in fitness]
         fitness[fitness==0] = 'NaN'
+
+    if network_only:
+        colorbar = False
     
     # Figure out the length of the bit sequences we're working with
     N = int(np.log2(len(fitness)))
@@ -613,12 +622,30 @@ def plot_landscape(p,conc=10**0,
     
     edgelist = list(G.edges())
     edge_pos = np.asarray([(pos[e[0]], pos[e[1]]) for e in edgelist])
+
+    edge_colors = []
+    edge_widths = []
+    if plot_sub_network:
+        sub_network_str = [p.int_to_binary(b) for b in sub_network]
+
+    for e in edgelist:
+
+        if plot_sub_network:
+            if e[0][0] in sub_network_str and e[1][0] in sub_network_str:
+                edge_colors.append('black')
+                edge_widths.append(2)
+        else:
+            edge_colors.append(edge_color)
+            edge_widths.append(1)
+
+
     edge_collection = LineCollection(
         edge_pos,
-        linewidths=1,
+        linewidths=edge_widths,
         antialiaseds=(1,),
         linestyle='solid',
-        zorder=1)
+        zorder=1,
+        color=edge_colors)
     edge_collection.set_zorder(1)
     ax.add_collection(edge_collection)
     
@@ -630,14 +657,35 @@ def plot_landscape(p,conc=10**0,
     else:
         vmin=min(fitness)
         vmax=max(fitness)
-    
-    ax.scatter(xy[:,0],xy[:,1],
-               s=node_size,
-               c=fitness,
-               vmin=vmin,
-               vmax=vmax,
-               clip_on=False,
-               **kwargs)
+
+    if not network_only:
+        ax.scatter(xy[:,0],xy[:,1],
+                s=node_size,
+                c=fitness,
+                vmin=vmin,
+                vmax=vmax,
+                clip_on=False,
+                **kwargs)
+        
+    else:
+        ax.scatter(xy[:,0],xy[:,1],
+                s=node_size,
+                c='white',
+                edgecolors='black',
+                vmin=vmin,
+                vmax=vmax,
+                clip_on=False,
+                **kwargs)
+    if plot_sub_network:
+        if sub_network is None:
+            raise ValueError('sub_network should be a list of ints')
+        ax.scatter(xy[sub_network,0],xy[sub_network,1],
+                s=node_size,
+                c=sub_network_color,
+                vmin=vmin,
+                vmax=vmax,
+                clip_on=False,
+                **kwargs)
     
     # if you don't want to include nodes with fitness = 0
     if ignore_zero:
@@ -649,18 +697,22 @@ def plot_landscape(p,conc=10**0,
                c='gray',
                clip_on=False,
                **kwargs)
-    
+
     if textcolor is not None:
         for n, label in labels.items():
             (x, y) = pos[n]
             if not isinstance(label, str):
                 label = str(label)  # this makes "1" and 1 labeled the same
+            if plot_sub_network and n[0] in sub_network_str:
+                color = 'white'
+            else:
+                color = textcolor
             ax.text(
                 x,
                 y,
                 label,
                 size=textsize,
-                color=textcolor,
+                color=color,
                 horizontalalignment='center',
                 verticalalignment='center',
                 transform=ax.transData,
@@ -704,8 +756,6 @@ def plot_landscape(p,conc=10**0,
         xdata_range = max(xy[:,0])-min(xy[:,0])
         ax.set_aspect(xdata_range/ydata_range)
         
-        
-    
     xl = ax.get_xlim()
     xrange = xl[1]-xl[0]
     xl = [xl[0]-resize_param*xrange,xl[1]+xrange*resize_param]
@@ -720,13 +770,11 @@ def plot_landscape(p,conc=10**0,
     return ax
 
 def add_landscape_to_fitness_curve(c,ax,pop,
-                                   textcolor='gray',
-                                   colorbar=False,
-                                   square=True,
                                    vert_lines=True,
                                    position = 'top',
                                    pad = 0,
                                    vert_lines_ydata = None,
+                                   width=3,
                                    **kwargs):
     
     if position == 'top':
@@ -736,12 +784,9 @@ def add_landscape_to_fitness_curve(c,ax,pop,
     else:
         raise Exception('Position argument not recognized')
     
-    x = get_pos_in_log_space(c, 3)
-    l = ax.inset_axes([x[0],ypos,x[1]-x[0],0.5],transform=ax.transData)
-    l = plot_landscape(pop,c,ax=l,node_size=200,
-                        colorbar=colorbar,
-                        textcolor=textcolor,
-                        square=square,
+    x = get_pos_in_log_space(c, width)
+    lax = ax.inset_axes([x[0],ypos,x[1]-x[0],width],transform=ax.transData)
+    lax = plot_landscape(pop,c,ax=lax,
                         **kwargs)
     
     if vert_lines:
@@ -753,7 +798,7 @@ def add_landscape_to_fitness_curve(c,ax,pop,
         xdata = np.ones(len(ydata))*c
         ax.plot(xdata,ydata,'--',color='black',alpha=0.5)        
     
-    return l
+    return ax,lax
 
 def plot_population_count(pop,
                           c,
@@ -972,7 +1017,7 @@ def get_pos_in_log_space(center,width):
         log10(x[1]-x[0]) = width
 
     """
-    
+
     center = np.log10(center)
     x0 = center - width/2
     x1 = center + width/2
@@ -1067,3 +1112,13 @@ def shrinky(ax,pad):
     ax.set_position(pos)    
     
     return ax
+
+def hilo(a, b, c):
+    if c < b: b, c = c, b
+    if b < a: a, b = b, a
+    if c < b: b, c = c, b
+    return a + c
+
+def complement(r, g, b):
+    k = hilo(r, g, b)
+    return tuple(k - u for u in (r, g, b))
