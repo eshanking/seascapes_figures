@@ -44,3 +44,9 @@ def load_fitness(data_path):
     fit_array = np.array(cols)
     fit_array = fit_array.astype('float')
     return fit_array
+
+def load_growth_rate_data(data_path):
+    
+    data = pd.read_csv(data_path)
+    
+    return data

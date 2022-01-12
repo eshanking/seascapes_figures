@@ -329,3 +329,47 @@ def est_mic(pop,gen,Kmic=None,growth_rate=None):
     c=-0.6824968
     mic = 10**(pop.ic50[gen]+6 - c*np.log((1/Kmic)-1))
     return mic
+
+def get_background_keys(df):
+
+    # row A, row H, col 1, and col 12
+
+    k = df.keys()
+
+    k = k[2:]
+    bg_keys = [y for y in k if int(y[1:]) == 1] # col 1
+    bg_keys = bg_keys + [y for y in k if (int(y[1:]) == 12 and y not in bg_keys)]
+    bg_keys = bg_keys + [y for y in k if (y[0] == 'A' and y not in bg_keys)]
+    bg_keys = bg_keys + [y for y in k if (y[0] == 'H' and y not in bg_keys)]
+
+    return bg_keys
+
+def estimate_background(df):
+
+    bg_keys = get_background_keys(df)
+    s = 0
+
+    for key in bg_keys:
+        s += np.average(df[key])
+
+    bg = s/len(bg_keys)
+
+    return bg
+
+
+def subtract_background(df):
+
+    bg = estimate_background(df)
+    datakeys = df.keys()[2:]
+
+    if (df.values < bg).any():
+        bg = np.min(df.values)
+        
+
+    for key in datakeys:
+        df[key] = df[key] - bg
+
+    return df
+
+def est_growth_rate():
+    return

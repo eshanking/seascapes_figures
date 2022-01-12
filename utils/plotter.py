@@ -1,5 +1,4 @@
 import sys
-sys.path.append('/Users/eshanking/repos')
 import matplotlib.pyplot as plt
 from cycler import cycler
 import seaborn as sns
@@ -995,6 +994,19 @@ def msw_grid(pop,
 
     return ax
 
+
+def plot_growth_rates(pop):
+    
+    fig,ax = plt.subplots()
+    df = pop.growth_rate_data
+
+    datakeys = df.keys()
+    datakeys = datakeys[2:]
+    
+    for key in datakeys:
+        ax.plot(np.log10(df[key]))
+
+    return fig,ax
 
 # Helper methods
 

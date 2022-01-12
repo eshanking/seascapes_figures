@@ -205,6 +205,12 @@ class Population:
             self.drugless_rates,self.ic50, = \
                 fitness.gen_random_seascape(n_allele)
             self.n_genotype = 2**n_allele
+
+        elif fitness_data == 'estimate':
+            self.growth_rate_path = dir_manager.make_datapath_absolute('20210929_plate1.csv')
+            self.growth_rate_data = dir_manager.load_growth_rate_data(self.growth_rate_path)
+            self.growth_rate_data = fitness.subtract_background(self.growth_rate_data)
+            self.n_genotype = 16
             
         # Initial number of cells (default = 10,000 at 0000)
         if init_counts is None:
