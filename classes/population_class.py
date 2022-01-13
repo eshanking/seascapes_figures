@@ -4,6 +4,7 @@ import numpy as np
 import math
 import random
 from seascapes_figures.utils import plotter, pharm, fitness, dir_manager
+import pandas as pd
 
 class Population:
     
@@ -129,7 +130,8 @@ class Population:
                  stop_condition = False,
                  timestep_scale = 1,
                  x_lim = None, # plotting
-                 y_lim = None # plotting
+                 y_lim = None, # plotting
+                 **kwargs
                  ):
         """
         """        
@@ -207,10 +209,27 @@ class Population:
             self.n_genotype = 2**n_allele
 
         elif fitness_data == 'estimate':
-            self.growth_rate_path = dir_manager.make_datapath_absolute('20210929_plate1.csv')
-            self.growth_rate_data = dir_manager.load_growth_rate_data(self.growth_rate_path)
-            self.growth_rate_data = fitness.subtract_background(self.growth_rate_data)
-            self.n_genotype = 16
+
+            self.plate_paths = []
+
+            if 'plate_paths' in kwargs:
+                self.plate_paths = kwargs['plate_paths']
+            else:
+                self.plate_paths = ['20210929_plate1.csv','20210929_plate2.csv','20210929_plate3.csv']
+            self.plate_paths = [dir_manager.make_datapath_absolute(p) for p in self.plate_paths]
+            
+            self.growth_rate_data = []
+            for plate_path in self.plate_paths:
+                self.growth_rate_data.append(fitness.get_growth_rate_data(plate_path))
+            
+            if 'seascape_drug_conc' in kwargs:
+                self.seascape_drug_conc = kwargs['seascape_drug_conc']
+            else:
+                self.seascape_drug_conc = [0,0.003,0.0179,0.1072,0.643,3.858,23.1481,138.8889,833.3333,5000] #ug/mL
+
+            self.max_od = fitness.get_max_od(self)
+            self.seascape_library = fitness.gen_seascape_library(self)
+            self.n_genotype = len(self.seascape_library.keys()) - 1
             
         # Initial number of cells (default = 10,000 at 0000)
         if init_counts is None:

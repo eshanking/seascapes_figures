@@ -1,4 +1,8 @@
 import numpy as np
+from numpy.ma.core import get_data
+import scipy
+from seascapes_figures.utils import dir_manager
+import matplotlib.pyplot as plt
 
 def gen_fitness_curves(pop,conc=None):
     
@@ -344,6 +348,15 @@ def get_background_keys(df):
 
     return bg_keys
 
+def get_data_keys(df):
+
+    bg_keys = get_background_keys(df)
+
+    data_keys = [k for k in df.keys() if k not in bg_keys]
+    data_keys = data_keys[2:]
+
+    return data_keys
+
 def estimate_background(df):
 
     bg_keys = get_background_keys(df)
@@ -371,5 +384,150 @@ def subtract_background(df):
 
     return df
 
-def est_growth_rate():
-    return
+def get_growth_rate_data(data_path):
+    
+    df = dir_manager.load_growth_rate_data(data_path)
+    df = subtract_background(df)
+
+    return df
+
+def get_growth_rates_from_df(df,carrying_cap=None):
+    
+    """Extracts the growth rates from timeseries growth data in a dataframe
+
+    Arguments:
+        df: pandas DataFrame
+            data frame containing growth rate data
+
+    Returns:
+        growth_rates: dict
+            dictionary of growth rates for each experimental condition
+    """
+
+    growth_rates = {}
+
+    # assumes outer row is background data
+    data_keys = get_data_keys(df)
+    time = df['Time [s]']
+
+    for k in data_keys:
+        growth_rates[k] = est_growth_rate(df[k],t=time,carrying_cap=carrying_cap)
+        # cur_genotype = k[0]
+        # if cur_genotype == prev_genotype:
+        #     growth_rates[k] = est_growth_rate(df[k],t=time,carrying_cap=cc)
+        # else:
+        #     # get new carrying capacity
+        #     genotype_keys = [k for k in data_keys if k[0]==prev_genotype]
+
+
+    return growth_rates
+
+def gen_seascape_library(pop):
+
+    seascape_lib = {}
+    seascape_lib['drug_conc'] = pop.seascape_drug_conc # add drug concentration data
+
+    library = ['B','C','D','E','F'] # library of column names
+    genotype = 0
+
+    for df in pop.growth_rate_data: # for each plate
+        
+        growth_rates = get_growth_rates_from_df(df,carrying_cap=pop.max_od) # estimate the growth rate for each set of timeseries data
+
+        for l in library:
+            gr_vect = []
+            i = 2
+            for c in pop.seascape_drug_conc:
+                key = l + str(i) # each key is a seperate column in the plate reader data,looping over i holds genotype steady and increments drug concentration
+                gr_vect.append(growth_rates[key])
+                i+=1
+            # print(len(gr_vect))
+            seascape_lib[str(genotype)] = gr_vect
+            genotype += 1
+    
+    # df3 = pop.growth_rate_data[2]
+    # print(genotype)
+    l = 'G'
+    i=2
+    gr_vect = []
+    for c in pop.seascape_drug_conc:
+        key = l + str(i)
+        # print(key)
+        gr_vect.append(growth_rates[key])
+        i+=1
+    
+    seascape_lib[str(genotype)] = gr_vect
+
+    return seascape_lib
+
+def est_growth_rate(growth_curve,t=None,debug=False,carrying_cap=None):
+
+    """Estimates microbial growth rate from OD growth rate curves
+
+    Arguments:
+        growth_rate: list of floats or numpy array
+            Growth rate data
+        t (optional): list of floats or numpy array. 
+            Time vector corresponding to growth rate data. If t is not given, algorithm 
+            assumes each time step is 1 second.
+        degug (optional): boolean
+            Default False. If True, displays plots useful for debugging
+
+    Returns:
+        float: Growth rate in units of 1/s
+    """
+
+    if t is None:
+        t = np.arange(len(growth_curve))
+
+    if not isinstance(growth_curve,np.ndarray):
+        growth_curve = np.array(growth_curve)
+    
+    # normalize to range (0,1)
+    growth_curve = growth_curve - min(growth_curve)
+    if carrying_cap is not None:
+        growth_curve = growth_curve/carrying_cap
+    else:
+        growth_curve = growth_curve/max(growth_curve)
+
+    # method 1
+    # compute derivative
+    dpdt = np.zeros(len(growth_curve)-1)
+    r = np.zeros(len(dpdt))
+    for i in range(len(growth_curve)-1):
+        p = growth_curve[i]
+        dp = growth_curve[i+1] - growth_curve[i]
+        dt = t[i+1] - t[i]
+        dpdt[i] = dp/dt
+        # compute r
+        if p == 0 or 1-p == 0:
+            r[i] = 0
+        else:
+            r[i] = dpdt[i]/(1/(p*(1-p)))
+    
+    r1 = np.max(r)
+    if debug:
+        fig,ax = plt.subplots(nrows=3)
+        ax[0].hist(r)
+        ax[1].plot(t,growth_curve)
+        ax[2].plot(t[:-1],r)
+        ax[0].set_title('Growth rate histogram')
+        ax[0].set_xlabel('$r$')
+        ax[1].set_title('Normalized growth curve')
+        ax[1].set_xlabel('t (s)')
+        ax[2].set_title('Growth rate over time')
+        ax[2].set_xlabel('t (s)')
+        plt.tight_layout()
+        
+    return r1
+
+def get_max_od(pop):
+
+    max_od = 0
+    for df in pop.growth_rate_data:
+        data_keys = get_data_keys(df)
+        for key in data_keys:
+            if max_od < max(df[key]):
+                max_od = max(df[key])
+
+    return max_od
