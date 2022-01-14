@@ -228,8 +228,10 @@ class Population:
                 self.seascape_drug_conc = [0,0.003,0.0179,0.1072,0.643,3.858,23.1481,138.8889,833.3333,5000] #ug/mL
 
             self.max_od = fitness.get_max_od(self)
+            self.growth_rate_library = fitness.gen_growth_rate_library(self)
+            self.n_genotype = len(self.growth_rate_library.keys()) - 1
+
             self.seascape_library = fitness.gen_seascape_library(self)
-            self.n_genotype = len(self.seascape_library.keys()) - 1
             
         # Initial number of cells (default = 10,000 at 0000)
         if init_counts is None:

@@ -13,6 +13,8 @@ from matplotlib.colors import to_rgba
 import networkx as nx
 from labellines import labelLine
 
+# from seascapes_figures.utils.fitness import logistic_pharm_curve
+
 def gen_color_cycler(style=None,palette='bright',n_colors=16):
     
     if style is None:
@@ -153,17 +155,39 @@ def plot_fitness_curves(pop,
                         color_kwargs={}):
     
     if pop.fitness_data == 'estimate':
+        gl = pop.growth_rate_library
         sl = pop.seascape_library
         fig, ax = plt.subplots(figsize = (10,6))
-        c = sl['drug_conc']
+
+        xdata = gl['drug_conc']
 
         cc = gen_color_cycler(**color_kwargs)
         ax.set_prop_cycle(cc)
 
+        if min(xdata) == 0:
+            xmin = np.log10(xdata[1])
+        else:
+            xmin = np.log10(min(xdata))
+        xmax = np.log10(max(xdata))
+
+        xdata = np.logspace(xmin,xmax)
+        if not xdata[0] == 0:
+            xdata = np.insert(xdata,0,0)
+
         for g in range(pop.n_genotype):
-            key = str(g)
-            data = np.array(sl[key])*(60**3)
-            ax.plot(c,data,label = str(pop.int_to_binary(g)),linewidth=linewidth) 
+            
+            f = []
+            sl_t = sl[str(g)]
+            ic50 = sl_t['ic50']
+
+            for c in xdata:
+                
+                f_t = fitness.logistic_pharm_curve(c,ic50,sl_t['g_drugless'],sl_t['hill_coeff'])
+                f_t = f_t*(60**2)
+                f.append(f_t)
+                
+
+            ax.plot(xdata,f,label = str(pop.int_to_binary(g)),linewidth=linewidth) 
 
         ax.set_xscale('log')
         

@@ -1,8 +1,9 @@
 import numpy as np
 from numpy.ma.core import get_data
 import scipy
-from seascapes_figures.utils import dir_manager
+from seascapes_figures.utils import dir_manager, results_manager
 import matplotlib.pyplot as plt
+import os
 
 def gen_fitness_curves(pop,conc=None):
     
@@ -411,7 +412,7 @@ def get_growth_rates_from_df(df,carrying_cap=None):
     time = df['Time [s]']
 
     for k in data_keys:
-        growth_rates[k] = est_growth_rate(df[k],t=time,carrying_cap=carrying_cap)
+        growth_rates[k] = est_growth_rate(df[k],t=time)
         # cur_genotype = k[0]
         # if cur_genotype == prev_genotype:
         #     growth_rates[k] = est_growth_rate(df[k],t=time,carrying_cap=cc)
@@ -422,10 +423,52 @@ def get_growth_rates_from_df(df,carrying_cap=None):
 
     return growth_rates
 
-def gen_seascape_library(pop):
+def gen_seascape_library(pop,debug=False):
+    
+    if not 'growth_rate_library' in pop.__dict__:
+        raise ValueError('No growth rate library in population.')
+    else:
+        gl = pop.growth_rate_library
+    
+    sl = {}
+    dc = gl['drug_conc']
+    
+    for g in range(pop.n_genotype):
+        popt = fit_hill_curve(dc,gl[str(g)],debug=debug)
+        ic50 = popt[0]
+        g_drugless = popt[1]
+        hill_coeff = popt[2]
+        d_t = {'ic50':ic50,
+               'g_drugless':g_drugless,
+               'hill_coeff':hill_coeff}
+        sl[str(g)] = d_t
 
-    seascape_lib = {}
-    seascape_lib['drug_conc'] = pop.seascape_drug_conc # add drug concentration data
+    return sl
+    
+def sl_to_fitness(pop,g,conc):
+    """Seascape library to fitness value (in units per second)
+
+    Args:
+        pop ([type]): [description]
+        g ([type]): [description]
+        conc ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+
+    ic50 = pop.seascape_library[str(g)]['ic50']
+    # ic50 = np.log10(ic50)
+    g_drugless = pop.seascape_library[str(g)]['g_drugless']
+    hc = ic50 = pop.seascape_library[str(g)]['hill_coeff']
+
+    f = logistic_pharm_curve(conc,ic50,g_drugless,hc)
+    return f
+
+def gen_growth_rate_library(pop):
+
+    growth_rate_lib = {}
+    growth_rate_lib['drug_conc'] = pop.seascape_drug_conc # add drug concentration data
 
     library = ['B','C','D','E','F'] # library of column names
     genotype = 0
@@ -442,7 +485,7 @@ def gen_seascape_library(pop):
                 gr_vect.append(growth_rates[key])
                 i+=1
             # print(len(gr_vect))
-            seascape_lib[str(genotype)] = gr_vect
+            growth_rate_lib[str(genotype)] = gr_vect
             genotype += 1
     
     # df3 = pop.growth_rate_data[2]
@@ -456,11 +499,12 @@ def gen_seascape_library(pop):
         gr_vect.append(growth_rates[key])
         i+=1
     
-    seascape_lib[str(genotype)] = gr_vect
+    growth_rate_lib[str(genotype)] = gr_vect
 
-    return seascape_lib
+    return growth_rate_lib
 
-def est_growth_rate(growth_curve,t=None,debug=False,carrying_cap=None):
+def est_growth_rate(growth_curve,t=None,debug=False,save_debug=False,num=None,
+                    method='scipy',carrying_cap=4):
 
     """Estimates microbial growth rate from OD growth rate curves
 
@@ -476,50 +520,138 @@ def est_growth_rate(growth_curve,t=None,debug=False,carrying_cap=None):
     Returns:
         float: Growth rate in units of 1/s
     """
+    growth_curve = growth_curve/carrying_cap
 
-    if t is None:
-        t = np.arange(len(growth_curve))
+    if method == 'custom':
+        if t is None:
+            t = np.arange(len(growth_curve))
 
-    if not isinstance(growth_curve,np.ndarray):
-        growth_curve = np.array(growth_curve)
-    
-    # normalize to range (0,1)
-    growth_curve = growth_curve - min(growth_curve)
-    if carrying_cap is not None:
-        growth_curve = growth_curve/carrying_cap
-    else:
-        growth_curve = growth_curve/max(growth_curve)
-
-    # method 1
-    # compute derivative
-    dpdt = np.zeros(len(growth_curve)-1)
-    r = np.zeros(len(dpdt))
-    for i in range(len(growth_curve)-1):
-        p = growth_curve[i]
-        dp = growth_curve[i+1] - growth_curve[i]
-        dt = t[i+1] - t[i]
-        dpdt[i] = dp/dt
-        # compute r
-        if p == 0 or 1-p == 0:
-            r[i] = 0
-        else:
-            r[i] = dpdt[i]/(1/(p*(1-p)))
-    
-    r1 = np.max(r)
-    if debug:
-        fig,ax = plt.subplots(nrows=3)
-        ax[0].hist(r)
-        ax[1].plot(t,growth_curve)
-        ax[2].plot(t[:-1],r)
-        ax[0].set_title('Growth rate histogram')
-        ax[0].set_xlabel('$r$')
-        ax[1].set_title('Normalized growth curve')
-        ax[1].set_xlabel('t (s)')
-        ax[2].set_title('Growth rate over time')
-        ax[2].set_xlabel('t (s)')
-        plt.tight_layout()
+        if not isinstance(growth_curve,np.ndarray):
+            growth_curve = np.array(growth_curve)
         
-    return r1
+        # normalize to range (0,1)
+        growth_curve = growth_curve - min(growth_curve)
+        if carrying_cap is not None:
+            growth_curve = growth_curve/carrying_cap
+        else:
+            growth_curve = growth_curve/max(growth_curve)
+
+        # method 1
+        # compute derivative
+        dpdt = np.zeros(len(growth_curve)-1)
+        r = np.zeros(len(dpdt))
+        for i in range(len(growth_curve)-1):
+            p = growth_curve[i]
+            dp = growth_curve[i+1] - growth_curve[i]
+            dt = t[i+1] - t[i]
+            dpdt[i] = dp/dt
+            # compute r
+            if p == 0 or 1-p == 0:
+                r[i] = 0
+            else:
+                r[i] = dpdt[i]/(1/(p*(1-p)))
+        
+        if debug:
+            fig,ax = plt.subplots(nrows=3)
+            ax[0].hist(r)
+            ax[1].plot(t,growth_curve)
+            ax[2].plot(t[:-1],r)
+            ax[0].set_title('Growth rate histogram')
+            ax[0].set_xlabel('$r$')
+            ax[1].set_title('Normalized growth curve')
+            ax[1].set_xlabel('t (s)')
+            ax[2].set_title('Growth rate over time')
+            ax[2].set_xlabel('t (s)')
+            plt.tight_layout()
+        
+        r = np.max(r)
+
+
+    # t = t/(60**3)
+    # method 2: curve fit using scipy
+    elif method == 'scipy':
+
+        p0 = [10**-6,0.05,1]
+
+        popt, pcov = scipy.optimize.curve_fit(logistic_growth_curve,
+                                            t,growth_curve,p0=p0,
+                                            bounds=(0,1))
+
+        r = popt[0]
+        if r < 0:
+            r = 0
+        if popt[2] < popt[1]: # if the carrying capacity is less than the initial population size
+            r = 0
+        if popt[2] < 0.05:
+            r = 0
+        
+        if debug:
+            fig,ax = plt.subplots()
+
+            ax.plot(t,growth_curve)
+
+            est = logistic_growth_curve(t,popt[0],popt[1],popt[2])
+            
+            ax.plot(t,est)
+            # print(popt[0])
+            p0 = round(popt[1]*10**5)/10**5
+            k = round(popt[2]*10**5)/10**5
+            r = round(r*10**5)/10**5
+            title = str(r*(60**2)) + ' ' + str(p0) + ' ' + str(k)
+            ax.set_title(title)
+    
+    if save_debug:
+        if num is None:
+            savename = 'debug' + os.sep + 'debug_fig.pdf'
+        else:
+            savename = 'debug' + os.sep + 'debug_fig' + str(num) + '.pdf'
+        results_manager.save_fig(fig,savename)
+    
+
+    return r
+
+def fit_hill_curve(xdata,ydata,debug=False):
+
+    # interpolate data
+    xd_t = xdata
+    yd_t = ydata
+    f = scipy.interpolate.interp1d(xdata,ydata,kind='previous')
+
+    if min(xdata) == 0:
+        xmin = np.log10(xdata[1])
+    else:
+        xmin = np.log10(min(xdata))
+    xmax = np.log10(max(xdata))
+
+    xdata = np.logspace(xmin,xmax)
+    if not xdata[0] == 0:
+        xdata = np.insert(xdata,0,0)
+        # print('here')
+    ydata = f(xdata)
+
+
+    p0 = [0,ydata[0],-0.08]
+
+    if ydata[0] == 0:
+        g_drugless_bound = [0,1]
+    else:
+        g_drugless_bound = [ydata[0]-0.001*ydata[0],ydata[0]+0.001*ydata[0]]
+
+    # print(g_drugless_bound)
+
+    bounds = ([-5,g_drugless_bound[0],-1],[4,g_drugless_bound[1],-0.001])
+    popt, pcov = scipy.optimize.curve_fit(logistic_pharm_curve_vectorized,
+                                        xdata,ydata,p0=p0,bounds=bounds)
+
+    if debug:
+        est = [logistic_pharm_curve(x,popt[0],popt[1],popt[2]) for x in xdata]
+        fig,ax = plt.subplots()
+        ax.plot(xd_t,yd_t)
+        ax.plot(xdata,est)
+        ax.set_xscale('log')
+        ax.set_title('IC50 = ' + str(popt[0]))
+
+    return popt
 
 def get_max_od(pop):
 
@@ -531,3 +663,31 @@ def get_max_od(pop):
                 max_od = max(df[key])
 
     return max_od
+
+def logistic_growth_curve(t,r,p0,k):
+    # p0 = 10**-3
+
+    p = k/(1+((k-p0)/p0)*np.exp(-r*t))
+
+    return p
+
+def logistic_pharm_curve(x,IC50,g_drugless,hill_coeff):
+
+    if x == 0:
+        g = g_drugless
+    else:
+        g = g_drugless/(1+np.exp((IC50-np.log10(x))/hill_coeff))
+
+    return g
+
+def logistic_pharm_curve_vectorized(x,IC50,g_drugless,hill_coeff):
+
+    g = []
+
+    for x_t in x:
+        if x_t == 0:
+            g.append(g_drugless)
+        else:
+            g.append(g_drugless/(1+np.exp((IC50-np.log10(x_t))/hill_coeff)))
+
+    return g

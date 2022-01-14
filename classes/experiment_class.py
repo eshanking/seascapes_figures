@@ -1,4 +1,4 @@
-from seascapes_figures.classes.population_class import Population
+# from seascapes_figures.classes.population_class import Population
 from seascapes_figures.utils import plotter, dir_manager, fitness
 import numpy as np
 import pandas as pd
