@@ -1,4 +1,4 @@
-# from seascapes_figures.classes.population_class import Population
+from seascapes_figures.classes.population_class import Population
 from seascapes_figures.utils import plotter, dir_manager, fitness
 import numpy as np
 import pandas as pd
@@ -266,7 +266,6 @@ class Experiment():
             os.mkdir(save_folder) 
             
             self.results_path = save_folder
-            # self.experiment_info_path = self.root_path + os.sep + 'results' + os.sep + 'experiment_info_' + date_str + '_' + num_str + '.p'
             self.experiment_info_path = self.results_path + os.sep + 'experiment_info_' + date_str + '_' + num_str + '.p'
             self.exp_folders = []
             
@@ -414,11 +413,12 @@ class Experiment():
                         else:
                             save_folder = 'slope=' + str(p.slope)
                             save_folder.replace('.',',')
-                        self.save_counts(counts,n,save_folder)
+                        # self.save_counts(counts,n,save_folder)
                         data_dict = {'counts':counts,
                                      'drug_curve':drug}
                         self.save_dict(data_dict,n,save_folder)
-        # pickle.dump(self, open(self.experiment_info_path,"wb"))
+            if not self.debug:
+                pickle.dump(self, open(self.experiment_info_path,"wb"))
         
                     
                 # fig_savename = 'slope = ' + str(p.slope)

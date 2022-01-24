@@ -981,7 +981,7 @@ class Plotter():
         
         xticks = ax.get_xticks()
         xlabels = xticks
-        xlabels = xlabels/24
+        # xlabels = (xlabels/24)/pop.timestep_scale
         xlabels = np.array(xlabels).astype('int')
         ax.set_xticks(xticks)
         ax.set_xticklabels(xlabels)

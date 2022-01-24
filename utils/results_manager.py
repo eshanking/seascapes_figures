@@ -2,7 +2,7 @@ import os
 import pickle
 import pandas as pd
 from seascapes_figures.utils import dir_manager
-from seascapes_figures.classes.experiment_class import Experiment
+# from seascapes_figures.classes.experiment_class import Experiment
 # from fears.classes.experiment_class import Experiment
 
 def get_experiment_results(suffix=None,exp=None):
@@ -58,8 +58,9 @@ def get_data(sim_path):
         Data (typically simulation counts)
 
     """
-    data_df = pd.read_csv(sim_path)
-    data = data_df.to_numpy()
+    # data_df = pd.read_csv(sim_path)
+    f = open(sim_path,'rb')
+    data = pickle.load(f)
     
     return data
 

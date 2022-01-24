@@ -163,11 +163,8 @@ class Fitness:
                 
             else:
                 for kk in range(pop.n_genotype):
-                    fit_land[kk] = self.gen_fitness(pop,
-                                            kk,
-                                            conc,
-                                            pop.drugless_rates,
-                                            pop.ic50)/pop.doubling_time
+                    fit_land[kk] = self.gen_fitness(kk,
+                                            conc)/pop.doubling_time
         
         return fit_land
 
@@ -178,7 +175,7 @@ class Fitness:
         if pop is None:
             pop = self
 
-        fit_land = self.gen_fit_land(pop,conc)
+        fit_land = self.gen_fit_land(conc)
         
         # # takes the landscape at the max dose and scales the replication rate
         # # according to drug concentration

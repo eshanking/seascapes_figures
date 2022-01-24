@@ -5,7 +5,7 @@ from seascapes_figures.utils import plotter, results_manager
 import matplotlib.pyplot as plt
 import numpy as np
 
-p = Population(death_rate=0.01,fitness_data='estimate')
+p = Population(death_rate=0.0144,fitness_data='estimate')
 fig,ax = plt.subplots(nrows=2,ncols=2,figsize = (6,8))
 
 genotypes = np.array([0,1,2,3])
@@ -27,8 +27,8 @@ p.shifty(ax[1,1],0.02)
 ax[1,0].set_xlabel(p.drug_units)
 ax[1,1].set_xlabel(p.drug_units)
 
-ax[0,0].set_ylabel('Comparison',labelpad=20)
-ax[1,0].set_ylabel('Comparison',labelpad=20)
+ax[0,0].set_ylabel('Comparison',labelpad=35)
+ax[1,0].set_ylabel('Comparison',labelpad=35)
 
 results_manager.save_fig(fig,'msw_grid_ecoli.pdf')
 

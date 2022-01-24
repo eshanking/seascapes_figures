@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import pandas as pd
 import numpy as np
+import pickle
 
 def get_project_root() -> Path:
     return Path(__file__).parent.parent
@@ -50,3 +51,7 @@ def load_growth_rate_data(data_path):
     data = pd.read_csv(data_path)
     
     return data
+
+def load_experiment(exp_path):
+    e = pickle.load(exp_path)
+    return e

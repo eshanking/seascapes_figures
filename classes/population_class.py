@@ -555,7 +555,7 @@ class Population(fitness.Fitness,plotter.Plotter):
     
     # Private to avoid confusion with gen_fit_land
     def __gen_fl_for_abm(self,conc,counts):
-        fit_land = self.gen_fl_for_abm(self,conc,counts)
+        fit_land = self.gen_fl_for_abm(conc,counts)
         return fit_land
     
     # def randomize_seascape(self,
@@ -598,6 +598,10 @@ class Population(fitness.Fitness,plotter.Plotter):
     def gen_passage_drug_protocol(self):
         drug_curve = pharm.gen_passage_drug_protocol(self)
         return drug_curve
+
+    def set_drug_curve(self):
+        dc = self.gen_curves()
+        self.drug_curve = dc[0]
 ##############################################################################
 # Wrapper methods for plotting
   
