@@ -820,7 +820,7 @@ class Plotter():
                             location='right',
                             aspect=10)
             cb.outline.set_visible(False)
-            cb.set_label(cblabel,fontsize=8)
+            cb.set_label(cblabel,fontsize=15)
             
             if rank:
                 ticks = [min(fitness),max(fitness)]
@@ -828,7 +828,7 @@ class Plotter():
                 ticks = [max(fitness),min(fitness)]
                 ticks = np.array(ticks).astype('int')
                 ticks = [str(t) for t in ticks]
-                cb.set_ticklabels(ticks)
+                cb.set_ticklabels(ticks,fontsize=15)
         
         if square:
             ydata_range = max(xy[:,1])-min(xy[:,1])
@@ -854,6 +854,8 @@ class Plotter():
                                     pad = 0,
                                     vert_lines_ydata = None,
                                     width=3,
+                                    height=None,
+                                    vert_lines_kwargs={},
                                     **kwargs):
         
         if pop is None:
@@ -866,8 +868,11 @@ class Plotter():
         else:
             raise Exception('Position argument not recognized')
         
+        if height is None:
+            height = width
+
         x = self.get_pos_in_log_space(c, width)
-        lax = ax.inset_axes([x[0],ypos,x[1]-x[0],width],transform=ax.transData)
+        lax = ax.inset_axes([x[0],ypos,x[1]-x[0],height],transform=ax.transData)
         lax = self.plot_landscape(pop,c,ax=lax,
                             **kwargs)
         
@@ -878,7 +883,7 @@ class Plotter():
             else:
                 ydata = vert_lines_ydata
             xdata = np.ones(len(ydata))*c
-            ax.plot(xdata,ydata,'--',color='black',alpha=0.5)        
+            ax.plot(xdata,ydata,'--',color='black',**vert_lines_kwargs)        
         
         return ax,lax
 
