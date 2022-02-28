@@ -1,13 +1,8 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-<<<<<<< HEAD
-from fears.utils import results_manager, plotter
-import lifelines
-=======
 from fears.utils import results_manager, plotter, dir_manager
 import pandas as pd
->>>>>>> ac6fc3a1ba581ccdafb1f1716a6618f1070b7dc7
 
 data_folder = 'results_07202021_0000'
 exp_info_file = 'experiment_info_07202021_0000.p'

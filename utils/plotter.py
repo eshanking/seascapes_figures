@@ -621,7 +621,7 @@ class Plotter():
         have thickness proportional to the transition probability between nodes.
         """
         if p is None:
-            pop = self
+            p = self
 
         if fitness is None:
             fitness = p.gen_fit_land(conc)
