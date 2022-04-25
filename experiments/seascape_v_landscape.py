@@ -1,4 +1,4 @@
-from fears.classes.experiment_class import Experiment
+from seascapes_figures.classes.experiment_class import Experiment
 import numpy as np
 
 def make_data():

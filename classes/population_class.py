@@ -208,7 +208,7 @@ class Population(fitness.Fitness,plotter.Plotter):
             self.drug_units = '$\u03BC$M'
 
             self.drugless_rates,self.ic50, = \
-                fitness.gen_random_seascape(n_allele)
+                self.gen_random_seascape(n_allele)
             self.n_genotype = 2**n_allele
 
         elif fitness_data == 'estimate':

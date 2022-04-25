@@ -308,11 +308,19 @@ class Experiment():
             counts_seascape, ft = self.p_seascape.simulate()
             
             if not self.debug:
-                savedata = np.concatenate((counts_landscape,drug_curve),axis=1)
-                self.save_counts(savedata, num=None, save_folder=None,prefix = 'landscape_counts')
+                data_dict_landscape = {'counts':counts_landscape,
+                                'drug_curve':drug_curve}
+                self.save_dict(data_dict_landscape,save_folder='null_seascape')
+
+                data_dict_seascape = {'counts':counts_seascape,
+                                'drug_curve':drug_curve}
+                self.save_dict(data_dict_seascape,save_folder='natural_seascape')
+
+                # savedata = np.concatenate((counts_landscape,drug_curve),axis=1)
+                # self.save_counts(savedata, num=None, save_folder=None,prefix = 'landscape_counts')
                 
-                savedata = np.concatenate((counts_seascape,drug_curve),axis=1)
-                self.save_counts(savedata, num=None, save_folder=None,prefix = 'seascape_counts')
+                # savedata = np.concatenate((counts_seascape,drug_curve),axis=1)
+                # self.save_counts(savedata, num=None, save_folder=None,prefix = 'seascape_counts')
         
         elif self.experiment_type == 'inoculant-survival':
             # pbar = tqdm(total = n_curves*n_inoc) # progress bar
@@ -417,8 +425,8 @@ class Experiment():
                         data_dict = {'counts':counts,
                                      'drug_curve':drug}
                         self.save_dict(data_dict,n,save_folder)
-            if not self.debug:
-                pickle.dump(self, open(self.experiment_info_path,"wb"))
+        if not self.debug:
+            pickle.dump(self, open(self.experiment_info_path,"wb"))
         
                     
                 # fig_savename = 'slope = ' + str(p.slope)
@@ -448,7 +456,7 @@ class Experiment():
         # self.savename = savename
         return
     
-    def save_dict(self,data_dict,num,save_folder,prefix='sim_'):
+    def save_dict(self,data_dict,save_folder,prefix='sim_',num=None):
         # check if the desired save folder exists. If not, create it
         if save_folder is None:
             save_folder = ''

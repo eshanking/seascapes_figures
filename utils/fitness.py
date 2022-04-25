@@ -245,9 +245,9 @@ class Fitness:
         if pop is None:
             pop = self
 
-        landscape = self.gen_fit_land(pop,conc)
-        start_rates = self.gen_fit_land(pop,10**-3)
-        final_rates = self.gen_fit_land(pop,10**5)
+        landscape = self.gen_fit_land(conc,pop=pop)
+        start_rates = self.gen_fit_land(10**-3,pop=pop)
+        final_rates = self.gen_fit_land(10**5,pop=pop)
         # mid_rates = gen_fit_land(pop,10**1)
         
         start_points = self.scale_and_ignore_zeros(landscape,start_rates)
