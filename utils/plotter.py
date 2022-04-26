@@ -820,7 +820,7 @@ class Plotter():
                             location='right',
                             aspect=10)
             cb.outline.set_visible(False)
-            cb.set_label(cblabel,fontsize=15)
+            cb.set_label(cblabel,fontsize=10)
             
             if rank:
                 ticks = [min(fitness),max(fitness)]
@@ -828,7 +828,7 @@ class Plotter():
                 ticks = [max(fitness),min(fitness)]
                 ticks = np.array(ticks).astype('int')
                 ticks = [str(t) for t in ticks]
-                cb.set_ticklabels(ticks,fontsize=15)
+                cb.set_ticklabels(ticks,fontsize=10)
         
         if square:
             ydata_range = max(xy[:,1])-min(xy[:,1])

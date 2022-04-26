@@ -16,7 +16,7 @@ def make_data():
                'max_cells':10**11,
                'n_timestep':2400,
                'init_counts':init_counts,
-               'timestep_scale':15,
+               'timestep_scale':4,
                'plot':False,
                'plot_drug_curve':False,
                'drug_log_scale':True,
