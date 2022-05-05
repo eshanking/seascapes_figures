@@ -367,8 +367,19 @@ class Fitness:
         mic = 10**(pop.ic50[gen]+6 - c*np.log((1/Kmic)-1))
         return mic
 
+################################################################
+# Code for estimating fitness seascapes from OD data
+
+
     def get_background_keys(self,df):
-        
+        """Gets the dataframe keys for the background assuming a 1-well moat
+
+        Args:
+            df (pandas dataframe): dataframe containing raw OD data
+
+        Returns:
+            list: list of background keys
+        """
         # row A, row H, col 1, and col 12
 
         k = df.keys()
@@ -382,7 +393,14 @@ class Fitness:
         return bg_keys
 
     def get_data_keys(self,df):
+        """Gets the dataframe keys for the data assuming a 1-well moat
 
+        Args:
+            df (pandas dataframe): datafram containing raw OD data
+
+        Returns:
+            list: list of keys
+        """
         bg_keys = self.get_background_keys(df)
 
         data_keys = [k for k in df.keys() if k not in bg_keys]
@@ -391,7 +409,14 @@ class Fitness:
         return data_keys
 
     def estimate_background(self,df):
+        """Estimates the OD background assuming a 1-well moat
 
+        Args:
+            df (pandas dataframe): datafram containing raw OD data
+
+        Returns:
+            float: background OD
+        """
         bg_keys = self.get_background_keys(df)
         s = 0
 
@@ -404,7 +429,14 @@ class Fitness:
 
 
     def subtract_background(self,df):
+        """Subtracts OD background from raw OD data
 
+        Args:
+            df (pandas dataframe): datafram containing raw OD data
+
+        Returns:
+            pandas dataframe: background-subtracted data
+        """
         bg = self.estimate_background(df)
         datakeys = df.keys()[2:]
 
@@ -418,7 +450,14 @@ class Fitness:
         return df
 
     def get_growth_rate_data(self,data_path):
-        
+        """Loads and background subtracts growth rate data
+
+        Args:
+            data_path (str): path to raw csv data
+
+        Returns:
+            pandas dataframe: background-subtracted raw data
+        """
         df = dir_manager.load_growth_rate_data(data_path)
         df = self.subtract_background(df)
 
@@ -456,7 +495,18 @@ class Fitness:
         return growth_rates
 
     def gen_seascape_library(self,pop=None,debug=False):
-        
+        """Fits raw estimated growth rate values to a Hill dose-response curve
+
+        Args:
+            pop (population class object, optional): population class object. Defaults to None.
+            debug (bool, optional): generates plots useful for debugging if true. Defaults to False.
+
+        Raises:
+            ValueError: raises error if there is no growth rate library in the population class
+
+        Returns:
+            dict: seascape library
+        """
         if pop is None:
             pop = self
 
@@ -484,12 +534,12 @@ class Fitness:
         """Seascape library to fitness value (in units per second)
 
         Args:
-            pop ([type]): [description]
-            g ([type]): [description]
-            conc ([type]): [description]
+            pop (population class object): population class object
+            g (int): genotype
+            conc (float): drug concentration
 
         Returns:
-            [type]: [description]
+            float: fitness
         """
 
         if pop is None:
@@ -697,7 +747,14 @@ class Fitness:
         return popt
 
     def get_max_od(self,pop=None):
+        """Extract the max OD from a plate
 
+        Args:
+            pop (population class, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         pop = self
             
         max_od = 0
@@ -710,13 +767,33 @@ class Fitness:
         return max_od
 
     def logistic_growth_curve(self,t,r,p0,k):
+        """Logistic growth equation
 
+        Args:
+            t (float): time
+            r (float): growth rate
+            p0 (float): starting population size
+            k (float): carrying capacity
+
+        Returns:
+            float: population size at time t
+        """
         p = k/(1+((k-p0)/p0)*np.exp(-r*t))
 
         return p
 
     def logistic_pharm_curve(self,x,IC50,g_drugless,hill_coeff):
+        """Logistic dose-response curve. use if input is a single drug concentration
 
+        Args:
+            x (float): drug concentration scalar
+            IC50 (float)): IC50
+            g_drugless (float): drugless growth rate
+            hill_coeff (float): Hill coefficient
+
+        Returns:
+            numpy array: array of growth rates
+        """
         if x == 0:
             g = g_drugless
         else:
@@ -725,7 +802,17 @@ class Fitness:
         return g
 
     def logistic_pharm_curve_vectorized(self,x,IC50,g_drugless,hill_coeff):
+        """Defines the logistic dose-response curve. Use if the input is a vector of drug concentration curves
 
+        Args:
+            x (numpy array): drug concentration vector
+            IC50 (float)): IC50
+            g_drugless (float): drugless growth rate
+            hill_coeff (float): Hill coefficient
+
+        Returns:
+            numpy array: array of growth rates
+        """
         g = []
 
         for x_t in x:
