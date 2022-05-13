@@ -32,7 +32,7 @@ class Population(fitness.Fitness,plotter.Plotter):
                 k_abs: absorption coefficient
                 k_elim: eliminiation coefficient
             pulsed: simulates a patient taking a drug dose at intervals given 
-                by dose_schedule
+                by dose_schedule∏
             on_off: switches between 'on' (max_dose) and 'off' (min_dose) at
                 intervals given by dose_schedule. On/off ratio set by 
                 duty_cycle
