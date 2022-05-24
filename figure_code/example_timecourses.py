@@ -1,9 +1,14 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from fears.utils import results_manager, plotter, dir_manager
+import pickle
+from seascapes_figures.utils import results_manager, plotter
 
-def make_figure(roc_exp,adh_exp):
+def load_exp_info(info_path):
+    return pickle.load(open(info_path, 'rb'))
+
+# def make_figure(roc_exp,adh_exp):
+def make_figure(roc_info_path,adh_info_path):
     
     fig,ax = plt.subplots(nrows=3,ncols=4,figsize=(6,4))
     labelsize = 10
@@ -13,52 +18,66 @@ def make_figure(roc_exp,adh_exp):
     # data_folder = 'results_' + suffix
     # exp_info_file = 'experiment_info_' + suffix + '.p'
     
-    data_folder = roc_exp.results_path
-    exp_info_file = roc_exp.experiment_info_path
+    roc_exp = load_exp_info(roc_info_path)
+    adh_exp = load_exp_info(adh_info_path)
+
+    # data_folder = roc_exp.results_path
+    # exp_info_file = roc_exp.experiment_info_path
     
-    exp_folders,exp_info = results_manager.get_experiment_results(data_folder,
-                                                                 exp_info_file)
-    max_cells = exp_info.populations[0].max_cells
-    n_sims = exp_info.n_sims
-    k_abs = exp_info.slopes
+    exp_folders,exp_info = results_manager.get_experiment_results(exp=roc_exp)
+    # max_cells = exp_info.populations[0].max_cells
+    # n_sims = exp_info.n_sims
+    # k_abs = exp_info.slopes
     
     exp_num = 1
     pop_roc = exp_info.populations[0]
     
-    exp = exp_folders[exp_num]
-    
-    sim_files = os.listdir(path=exp)
-    sim_files = sorted(sim_files)
+
     
     # find one extinct and one survived simulation
     
-    k = 0
+    # k = 0
     found_extinct = False
     found_survived = False
+
+    n_sims = roc_exp.n_sims
     
     while found_extinct == False or found_survived == False:
-        sim = sim_files[k]
-        sim = exp + os.sep + sim
-        data = results_manager.get_data(sim)
-        data = data[:,0:-1]
-        data_t = data[-1,:]
-        if any(data_t >= 1):
-            num_survived = k
-            found_survived = True
-        else:
-            num_extinct = k
-            found_extinct = True
-        k+=1
+        # while exp_num < len(exp_folders):
+        exp = exp_folders[exp_num]
+        sim_files = os.listdir(path=exp)
+        sim_files = sorted(sim_files)
+        k = 0
+
+        while k < n_sims:
+            sim = sim_files[k]
+            sim = exp + os.sep + sim
+            data = results_manager.get_data(sim)
+            # data = data[:,0:-1]
+            # data_t = data[-1,:]
+            data_t = data['counts']
+            data_t = data_t[-1,:]
+            if any(data_t >= 1):
+                num_survived = k
+                found_survived = True
+            else:
+                num_extinct = k
+                # exp_extinct = exp_num
+                found_extinct = True
+            k+=1
+            # exp_num += 1
+
+
     #%%
     # plot ROC survived timecourse
     
     sim = sim_files[num_survived]
     sim = exp + os.sep + sim
     data = results_manager.get_data(sim)
-    dc = data[:,-1]
-    data = data[:,0:-1]
+    dc = data['drug_curve']
+    # data = data[:,0:-1]
     # data = data/np.max(data)
-    data_t = data[-1,:]
+    data_t = data['counts']
     tcax = ax[0,0]
     drug_kwargs = {'alpha':1,
                    'color':'black',
@@ -70,23 +89,24 @@ def make_figure(roc_exp,adh_exp):
     select_labels = [6,14,15]
     label_xpos = [1200,2500,4500]
     
-    data = data/np.max(data)
+    data_t = data_t/np.max(data_t)
+
+    p = roc_exp.populations[0]
     
-    tcax,t = plotter.plot_timecourse_to_axes(exp_info.populations[exp_num],
-                                                data,
-                                                tcax,
-                                                # drug_curve=dc,
-                                                drug_ax_sci_notation=True,
-                                                drug_kwargs=drug_kwargs,
-                                                legend_labels=True,
-                                                linewidth=1.5,
-                                                drug_curve_label = '',
-                                                labelsize = labelsize,
-                                                label_lines = True,
-                                                select_labels = select_labels,
-                                                label_xpos=label_xpos,
-                                                label_kwargs=label_kwargs
-                                                )
+    tcax,t = p.plot_timecourse_to_axes(data_t,
+                                        tcax,
+                                        # drug_curve=dc,
+                                        drug_ax_sci_notation=True,
+                                        drug_kwargs=drug_kwargs,
+                                        legend_labels=True,
+                                        linewidth=1.5,
+                                        drug_curve_label = '',
+                                        labelsize = labelsize,
+                                        label_lines = True,
+                                        select_labels = select_labels,
+                                        label_xpos=label_xpos,
+                                        label_kwargs=label_kwargs
+                                        )
     drug_ax = ax[1,0]
     drug_ax.plot(dc,color='black',linewidth=1)
     # drug_ax.set_yticklabels('')
@@ -97,10 +117,10 @@ def make_figure(roc_exp,adh_exp):
     sim = sim_files[num_extinct]
     sim = exp + os.sep + sim
     data = results_manager.get_data(sim)
-    dc = data[:,-1]
-    data = data[:,0:-1]
+    dc = data['drug_curve']
+    # data = data[:,0:-1]
     # data = data/np.max(data)
-    data_t = data[-1,:]
+    data_t = data['counts']
     tcax = ax[0,1]
     drug_kwargs = {'alpha':1,
                    'color':'black',
@@ -108,18 +128,17 @@ def make_figure(roc_exp,adh_exp):
                    # 'label':'Drug Concentration ($\u03BC$M)'
                    }
     
-    data = data/np.max(data)
+    data_t = data_t/np.max(data_t)
     
-    tcax,t = plotter.plot_timecourse_to_axes(exp_info.populations[exp_num],
-                                                data,
-                                                tcax,
-                                                # drug_curve=dc,
-                                                drug_ax_sci_notation=True,
-                                                drug_kwargs=drug_kwargs,
-                                                legend_labels=False,
-                                                linewidth=1.5,
-                                                labelsize = labelsize
-                                                )
+    tcax,t = p.plot_timecourse_to_axes(data_t,
+                                        tcax,
+                                        # drug_curve=dc,
+                                        drug_ax_sci_notation=True,
+                                        drug_kwargs=drug_kwargs,
+                                        legend_labels=False,
+                                        linewidth=1.5,
+                                        labelsize = labelsize
+                                        )
     drug_ax = ax[1,1]
     drug_ax.plot(dc,color='black',linewidth=1)
     #%% nonadherance data
@@ -134,14 +153,15 @@ def make_figure(roc_exp,adh_exp):
     data_folder = adh_exp.results_path
     exp_info_file = adh_exp.experiment_info_path
     
-    exp_folders,exp_info = results_manager.get_experiment_results(data_folder,
-                                                                 exp_info_file)
+    exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
     max_cells = exp_info.populations[0].max_cells
     n_sims = exp_info.n_sims
     
     pop = exp_info.populations[0]
     n_timestep = pop.n_timestep
-    exp = exp_folders[exp_num]
+    
+    exp_num = 2
+    # exp = exp_folders[exp_num]
     
     sim_files = os.listdir(path=exp)
     sim_files = sorted(sim_files)
@@ -152,27 +172,55 @@ def make_figure(roc_exp,adh_exp):
     found_extinct = False
     found_survived = False
     
-    while found_extinct == False or found_survived == False:
+    # while found_extinct == False or found_survived == False:
+    #     sim = sim_files[k]
+    #     sim = exp + os.sep + sim
+    #     data = results_manager.get_data(sim)
+    #     # data = data[:,0:-2]
+    #     data_t = data['counts']
+    #     data_t = data_t[-1,:]
+    #     if any(data_t >= 1):
+    #         num_survived = k
+    #         found_survived = True
+    #     else:
+    #         num_extinct = k
+    #         found_extinct = True
+    #     k+=1
+
+    k = 0
+    while (found_extinct == False or found_survived == False) and k < n_sims:
+        # while exp_num < len(exp_folders):
+        exp = exp_folders[exp_num]
+        sim_files = os.listdir(path=exp)
+        sim_files = sorted(sim_files)
+
         sim = sim_files[k]
         sim = exp + os.sep + sim
         data = results_manager.get_data(sim)
-        data = data[:,0:-2]
-        data_t = data[-1,:]
-        if any(data_t >= 1):
+        # data = data[:,0:-1]
+        # data_t = data[-1,:]
+        data_t = data['counts']
+        data_t = data_t[-1,:]
+        if any(data_t >= 10000):
             num_survived = k
             found_survived = True
         else:
             num_extinct = k
+            # exp_extinct = exp_num
             found_extinct = True
         k+=1
     
+    if found_extinct == False or found_survived == False:
+        print(found_extinct)
+        print(found_survived)
+        raise ValueError('No suitable example traces found')
     #%% plot nonadherance survived timecourse
     
     sim = sim_files[num_survived]
     sim = exp + os.sep + sim
     data = results_manager.get_data(sim)
-    dc = data[:,-2]
-    survived_schedule = data[:,-1]
+    dc = data['drug_curve']
+    survived_schedule = data['regimen']
     
     tcax = ax[0,2]
     drug_kwargs = {'alpha':1,
@@ -181,28 +229,27 @@ def make_figure(roc_exp,adh_exp):
                    # 'label':'Drug Concentration ($\u03BC$M)'
                    }
     label_kwargs = {'align':False}
-    tc = data[:,0:-2]
+    tc = data['counts']
     tc = tc/np.max(tc)
     
     select_labels = [2,6]
     label_xpos = [350,1100]
     
-    tcax,drug_ax = plotter.plot_timecourse_to_axes(exp_info.populations[exp_num],
-                                                tc,
-                                                tcax,
-                                                # drug_curve=dc,
-                                                drug_ax_sci_notation=True,
-                                                drug_kwargs=drug_kwargs,
-                                                legend_labels=True,
-                                                legend_size=16,
-                                                linewidth=1.5,
-                                                drug_curve_label = '',
-                                                labelsize = labelsize,
-                                                label_lines=True,
-                                                select_labels=select_labels,
-                                                label_xpos=label_xpos,
-                                                label_kwargs=label_kwargs
-                                                )
+    tcax,drug_ax = p.plot_timecourse_to_axes(tc,
+                                            tcax,
+                                            # drug_curve=dc,
+                                            drug_ax_sci_notation=True,
+                                            drug_kwargs=drug_kwargs,
+                                            legend_labels=True,
+                                            legend_size=16,
+                                            linewidth=1.5,
+                                            drug_curve_label = '',
+                                            labelsize = labelsize,
+                                            label_lines=True,
+                                            select_labels=select_labels,
+                                            label_xpos=label_xpos,
+                                            label_kwargs=label_kwargs
+                                            )
     drug_ax = ax[1,2]
     drug_ax.plot(dc,color='black',linewidth=1)
     
@@ -211,8 +258,8 @@ def make_figure(roc_exp,adh_exp):
     sim = sim_files[num_extinct]
     sim = exp + os.sep + sim
     data = results_manager.get_data(sim)
-    dc = data[:,-2]
-    extinct_schedule = data[:,-1]
+    dc = data['drug_curve']
+    extinct_schedule = data['regimen']
     
     tcax = ax[0,3]
     drug_kwargs = {'alpha':1,
@@ -221,14 +268,13 @@ def make_figure(roc_exp,adh_exp):
                    # 'label':'Drug Concentration ($\u03BC$M)'
                    }
     
-    tc = data[:,0:-2]
+    tc = data['counts']
     tc = tc/np.max(tc)
     
     select_labels = [0]
     label_xpos = [100]
     
-    tcax,drug_ax = plotter.plot_timecourse_to_axes(exp_info.populations[exp_num],
-                                                tc,
+    tcax,drug_ax = p.plot_timecourse_to_axes(tc,
                                                 tcax,
                                                 # drug_curve=dc,
                                                 drug_ax_sci_notation=True,
@@ -245,7 +291,7 @@ def make_figure(roc_exp,adh_exp):
     drug_ax.plot(dc,color='black',linewidth=1)
     #%%  plot dose times
     
-    x = np.arange(n_timestep-1)
+    x = np.arange(n_timestep)
     
     timescale = pop.dose_schedule/pop.timestep_scale
     
@@ -255,19 +301,19 @@ def make_figure(roc_exp,adh_exp):
     #%% Adjust positions
     
     for col in range(0,4):
-        ax[0,col] = plotter.shrinky(ax[0,col],0.04)
-        ax[1,col] = plotter.shrinky(ax[1,col],0.11)
-        ax[1,col] = plotter.shifty(ax[1,col],0.04)
+        ax[0,col] = p.shrinky(ax[0,col],0.04)
+        ax[1,col] = p.shrinky(ax[1,col],0.11)
+        ax[1,col] = p.shifty(ax[1,col],0.04)
         ax[1,col].ticklabel_format(style='scientific',axis='y',
                                               scilimits=(0,3))
         
-        ax[2,col] = plotter.shrinky(ax[2,col],0.2)
-        ax[2,col] = plotter.shifty(ax[2,col],0.2)
+        ax[2,col] = p.shrinky(ax[2,col],0.2)
+        ax[2,col] = p.shifty(ax[2,col],0.2)
     
     # shift right column to the right to make room for axis labels
     for col in range(2,4):
         for row in range(0,3):
-            ax[row,col] = plotter.shiftx(ax[row,col],0.05)
+            ax[row,col] = p.shiftx(ax[row,col],0.05)
             
     ax[2,2].spines['top'].set_visible(False)
     ax[2,3].spines['top'].set_visible(False)
@@ -292,7 +338,7 @@ def make_figure(roc_exp,adh_exp):
     xlim = ax[0,0].get_xlim()
     
     for col in range(0,2):
-        ax[1,col] = plotter.x_ticks_to_days(pop_roc,ax[1,col])
+        ax[1,col] = pop_roc.x_ticks_to_days(ax[1,col])
         ax[1,col].set_xticks(xt)
         ax[1,col].set_xticklabels(xl)
         ax[1,col].set_xlim(xlim)
@@ -304,7 +350,7 @@ def make_figure(roc_exp,adh_exp):
     
     for col in range(2,4):
         for row in range(1,3):
-            ax[row,col] = plotter.x_ticks_to_days(pop_roc,ax[row,col])
+            ax[row,col] = pop_roc.x_ticks_to_days(ax[row,col])
             ax[row,col].set_xticks(xt)
             ax[row,col].set_xticklabels(xl)
             ax[row,col].set_xlim(xlim)
@@ -338,7 +384,9 @@ def make_figure(roc_exp,adh_exp):
     k+=1
     ax[2,3].annotate(alphabet[k],(0.92,1.4),xycoords='axes fraction')
     
+    # fig.tight_layout()
+
     results_manager.save_fig(fig,'example_timecourses.pdf',bbox_inches='tight')
     
-if __name__ == '__main__':
-    make_figure()                            
+# if __name__ == '__main__':
+#     make_figure()                            

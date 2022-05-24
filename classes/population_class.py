@@ -467,7 +467,7 @@ class Population(fitness.Fitness,plotter.Plotter):
             mutations = np.random.choice(n_genotype, size=n_mut, p=P[:,genotype]).astype(np.uint8)
 
             # Add mutating cell to their final types
-            counts_t += np.bincount( mutations , minlength=n_genotype)
+            counts_t += np.bincount( mutations , minlength=n_genotype )
 
         counts_t += daughter_counts
 

@@ -99,7 +99,7 @@ yl = null_ax.get_ylim()
 ydata = np.arange(yl[0],yl[1],0.1)
 
 for c in conc:
-    p.add_landscape_to_fitness_curve(c,null_ax,exp_info.p_seascape,
+    p.add_landscape_to_fitness_curve(c,null_ax,exp_info.p_landscape,
                                            textcolor=textcolor,
                                            cmap=cmap,
                                            edgecolor=edgecolor,
