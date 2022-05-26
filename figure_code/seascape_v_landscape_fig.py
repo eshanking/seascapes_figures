@@ -12,8 +12,8 @@ def unpack(sim_path):
 
     return counts, drug_conc
 
-# suffix = '04252022_0000'
-suffix = '04262022_0001'
+suffix = '05252022_0000'
+# suffix = '04262022_0001'
 exp_folder,exp_info = results_manager.get_experiment_results(suffix=suffix)
 # fitness axes
 fig,ax = plt.subplots(nrows=2,ncols=2,figsize=(7,5))
