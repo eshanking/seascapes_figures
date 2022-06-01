@@ -359,7 +359,7 @@ class Experiment():
                     
                     u = np.array([u,])
                     u = u.transpose()
-                    counts = np.concatenate((counts,drug,u),axis=1)
+                    # counts = np.concatenate((counts,drug,u),axis=1)
   
                     if not self.debug:
                         # self.save_counts(counts,i,save_folder)

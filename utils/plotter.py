@@ -493,6 +493,7 @@ class Plotter():
         sorted_index = counts_total.argsort()
         sorted_index_big = sorted_index[-legend_size:]
         
+        # print(sorted_index_big)
         if grayscale is False:     
             cc = self.gen_color_cycler(**color_kwargs)
             counts_ax.set_prop_cycle(cc)
@@ -534,6 +535,7 @@ class Plotter():
         for genotype in range(counts.shape[1]):
             if genotype in sorted_index_big:
                 if legend_labels:
+                    # print(genotype)
                     counts_ax.plot(counts[:,genotype],linewidth=linewidth,
                                 zorder=10,
                                 label=str(pop.int_to_binary(genotype)),
