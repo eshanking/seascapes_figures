@@ -86,8 +86,8 @@ def make_figure(roc_info_path,adh_info_path):
                    # 'label':'Drug Concentration ($\u03BC$M)'
                    }
     label_kwargs = {'align':False}
-    select_labels = [6,14,15]
-    label_xpos = [1200,2500,4500]
+    select_labels = [7,15]
+    label_xpos = [900,4500]
     
     data_t = data_t/np.max(data_t)
 
@@ -129,15 +129,24 @@ def make_figure(roc_info_path,adh_info_path):
                    }
     
     data_t = data_t/np.max(data_t)
+
+    select_labels = [2]
+    label_xpos = [500]
     
+    label_kwargs = {'align':True}
+
     tcax,t = p.plot_timecourse_to_axes(data_t,
                                         tcax,
                                         # drug_curve=dc,
                                         drug_ax_sci_notation=True,
                                         drug_kwargs=drug_kwargs,
-                                        legend_labels=False,
+                                        legend_labels=True,
                                         linewidth=1.5,
-                                        labelsize = labelsize
+                                        labelsize = labelsize,
+                                        label_lines = True,
+                                        select_labels = select_labels,
+                                        label_xpos=label_xpos,
+                                        label_kwargs=label_kwargs
                                         )
     drug_ax = ax[1,1]
     drug_ax.plot(dc,color='black',linewidth=1)
@@ -158,9 +167,10 @@ def make_figure(roc_info_path,adh_info_path):
     n_sims = exp_info.n_sims
     
     pop = exp_info.populations[0]
+    pop_adh = pop
     n_timestep = pop.n_timestep
     
-    exp_num = 2
+    exp_num = 3
     # exp = exp_folders[exp_num]
     
     sim_files = os.listdir(path=exp)
@@ -201,7 +211,7 @@ def make_figure(roc_info_path,adh_info_path):
         # data_t = data[-1,:]
         data_t = data['counts']
         data_t = data_t[-1,:]
-        if any(data_t >= 10000):
+        if any(data_t >= 1):
             num_survived = k
             found_survived = True
         else:
@@ -228,12 +238,12 @@ def make_figure(roc_info_path,adh_info_path):
                    'linewidth':1
                    # 'label':'Drug Concentration ($\u03BC$M)'
                    }
-    label_kwargs = {'align':False}
+    label_kwargs = {'align':True}
     tc = data['counts']
     tc = tc/np.max(tc)
     
-    select_labels = [2,6]
-    label_xpos = [350,1100]
+    select_labels = [0,2]
+    label_xpos = [150,550]
     
     tcax,drug_ax = p.plot_timecourse_to_axes(tc,
                                             tcax,
@@ -303,17 +313,19 @@ def make_figure(roc_info_path,adh_info_path):
     for col in range(0,4):
         ax[0,col] = p.shrinky(ax[0,col],0.04)
         ax[1,col] = p.shrinky(ax[1,col],0.11)
-        ax[1,col] = p.shifty(ax[1,col],0.04)
+        # ax[1,col] = p.shifty(ax[1,col],-0.04)
         ax[1,col].ticklabel_format(style='scientific',axis='y',
                                               scilimits=(0,3))
         
         ax[2,col] = p.shrinky(ax[2,col],0.2)
-        ax[2,col] = p.shifty(ax[2,col],0.2)
+        ax[1,col] = p.shifty(ax[1,col],-0.02)
+        ax[2,col] = p.shifty(ax[2,col],0.10)
     
     # shift right column to the right to make room for axis labels
     for col in range(2,4):
         for row in range(0,3):
-            ax[row,col] = p.shiftx(ax[row,col],0.05)
+            ax[row,col] = p.shiftx(ax[row,col],0.1)
+        
             
     ax[2,2].spines['top'].set_visible(False)
     ax[2,3].spines['top'].set_visible(False)
@@ -343,50 +355,63 @@ def make_figure(roc_info_path,adh_info_path):
         ax[1,col].set_xticklabels(xl)
         ax[1,col].set_xlim(xlim)
         ax[1,col].set_xlabel('Days')
-        
-    xt = ax[0,2].get_xticks()
-    xl = ax[0,2].get_xticklabels()
-    xlim = ax[0,2].get_xlim()
     
+
     for col in range(2,4):
-        for row in range(1,3):
-            ax[row,col] = pop_roc.x_ticks_to_days(ax[row,col])
-            ax[row,col].set_xticks(xt)
-            ax[row,col].set_xticklabels(xl)
-            ax[row,col].set_xlim(xlim)
-        ax[2,col].set_xlabel('Days')
+        for row in range(0,3):
+            ax[row,col] = pop_adh.x_ticks_to_days(ax[row,col])
+
+    xt = ax[1,2].get_xticks()
+    xl = ax[1,2].get_xticklabels()
+    xlim = ax[1,2].get_xlim()
+
+    ax[0,2].set_xticks(xt)
+    ax[0,2].set_xticklabels(xl)
+    ax[0,2].set_xlim(xlim)
+
+    ax[0,3].set_xticks(xt)
+    ax[0,3].set_xticklabels(xl)
+    ax[0,3].set_xlim(xlim)
+
+    ax[1,0].ticklabel_format(style='scientific',axis='y',scilimits=(0,1))
+    ax[1,2].ticklabel_format(style='scientific',axis='y',scilimits=(0,1))
     
     #%% Add axis labels
     
-    ax[0,0].set_ylabel('Proportion',fontsize=8)
+    ax[0,0].set_ylabel('Proportion',fontsize=8,labelpad=0.8)
     ax[1,0].set_ylabel('Concentration ($\u03BC$M)',fontsize=8)
     
-    ax[0,2].set_ylabel('Proportion',fontsize=8)
+    ax[0,2].set_ylabel('Proportion',fontsize=8,labelpad=0.8)
     ax[1,2].set_ylabel('Concentration ($\u03BC$M)',fontsize=8)
     
     #%% add panel labels
     
-    alphabet = ['a','b','c','d','e','f','g','h','i','j']
+    alphabet = ['a','b','','d','e','f','','h','i','j']
     
     k = 0
     
     for row in range(2):
         for col in range(2):
-            ax[row,col].annotate(alphabet[k],(0.92,1.07),xycoords='axes fraction')
+            ax[row,col].annotate(alphabet[k],(0,1.07),xycoords='axes fraction')
             k+=1
             
     for row in range(0,2):
         for col in range(2,4):
-            ax[row,col].annotate(alphabet[k],(0.92,1.1),xycoords='axes fraction')
+            ax[row,col].annotate(alphabet[k],(0,1.1),xycoords='axes fraction')
             k+=1
     
-    ax[2,2].annotate(alphabet[k],(0.92,1.4),xycoords='axes fraction')
+    ax[2,2].annotate(alphabet[k],(0,1.4),xycoords='axes fraction')
     k+=1
-    ax[2,3].annotate(alphabet[k],(0.92,1.4),xycoords='axes fraction')
+    ax[2,3].annotate(alphabet[k],(0,1.4),xycoords='axes fraction')
+
+    ax[1,0].annotate('c',(0,1.47),xycoords='axes fraction')
+    ax[1,2].annotate('g',(0,1.47),xycoords='axes fraction')
     
     # fig.tight_layout()
 
     results_manager.save_fig(fig,'example_timecourses.pdf',bbox_inches='tight')
     
 # if __name__ == '__main__':
-#     make_figure()                            
+#     make_figure()     
+
+make_figure(roc_info_path,adh_info_path)                       

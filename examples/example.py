@@ -1,4 +1,4 @@
-from fears.classes.population_class import Population
+from seascapes_figures.classes.population_class import Population
 
 # Non-zero death rate, non-constant population, with a carrying capacity
 options = {
