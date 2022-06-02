@@ -7,16 +7,16 @@ def make_data():
     init_counts = np.zeros(4)
     init_counts[0] = 10**10
     
-    transition_times = [800,1600]
+    transition_times = [1000,2000]
     options = {'doubling_time':1.5,
                'death_rate':0,
                'mut_rate':10**-9,
                'n_sims':10,
                # 'carrying_cap':False,
                'max_cells':10**11,
-               'n_timestep':2400,
+               'n_timestep':3000,
                'init_counts':init_counts,
-               'timestep_scale':4,
+               'timestep_scale':2,
                'plot':False,
                'plot_drug_curve':False,
                'drug_log_scale':True,

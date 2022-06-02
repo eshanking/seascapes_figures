@@ -424,7 +424,7 @@ class Experiment():
                         # self.save_counts(counts,n,save_folder)
                         data_dict = {'counts':counts,
                                      'drug_curve':drug}
-                        self.save_dict(data_dict,n,save_folder)
+                        self.save_dict(data_dict,save_folder,num=n)
         if not self.debug:
             pickle.dump(self, open(self.experiment_info_path,"wb"))
         

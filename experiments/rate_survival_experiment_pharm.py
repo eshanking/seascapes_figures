@@ -26,7 +26,7 @@ def make_data():
                'mut_rate':1.4*10**-8,
                'carrying_cap':True,
                'max_cells':10**11,
-               'n_timestep':5840,
+               'n_timestep':2920,
                'init_counts':init_counts,
                # 'k_abs':0.95,
                # 'k_elim':0.00839,
