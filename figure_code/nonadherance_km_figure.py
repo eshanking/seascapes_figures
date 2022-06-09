@@ -1,12 +1,12 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from fears.utils import results_manager, plotter, dir_manager
+from seascapes_figures.utils import results_manager, dir_manager
 import pandas as pd
 import pickle
 
 
-def make_fig(adh_exp=None,suffix=None):
+def make_fig(adh_exp=None,exp_info_path=None):
     # suffix = '11182021_0001' # lab machine
     # suffix = '11112021_0000' # macbook
     
@@ -16,13 +16,17 @@ def make_fig(adh_exp=None,suffix=None):
     # else:
     #     data_folder = 'results_' + suffix
     #     exp_info_file = 'experiment_info_' + suffix + '.p'
+
+    if adh_exp is None:
+        adh_exp = pickle.load(open(exp_info_path,'rb'))
     
     fig,ax = plt.subplots(nrows=1,ncols=3,figsize=(8,2.5))
     
-    if suffix is None:
-        exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
-    else:
-        exp_folders,exp_info = results_manager.get_experiment_results(suffix=suffix)
+    # if suffix is None:
+    #     exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
+    # else:
+    #     exp_folders,exp_info = results_manager.get_experiment_results(suffix=suffix)
+    exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
 
     max_cells = exp_info.populations[0].max_cells
     n_sims = exp_info.n_sims
@@ -66,11 +70,8 @@ def make_fig(adh_exp=None,suffix=None):
         # while k < 10:
             sim = sim_files[k]
             sim = exp + os.sep + sim
-            counts, drug_conc, regimen = unpack(sim)
-            # data = results_manager.get_data(sim)
-            dc = drug_conc
-            # data = data[:,0:-2]
-            data = counts
+            data_dict = results_manager.get_data(sim)
+            data = data_dict['counts']
             
             death_event_obs[k],death_event_times[k] = \
                 exp_info.extinction_time(pop,data,thresh=1)
@@ -83,22 +84,19 @@ def make_fig(adh_exp=None,suffix=None):
                 
             k+=1
             
-        ax[0] = plotter.plot_kaplan_meier(pop,
-                                          death_event_times,
+        ax[0] = pop.plot_kaplan_meier(death_event_times,
                                           ax=ax[0],
                                           n_sims=n_sims,
                                           label=str(p_drop_t),
                                           mode='survival')
         
-        ax[1] = plotter.plot_kaplan_meier(pop,
-                                          gen2_resistance_times,
+        ax[1] = pop.plot_kaplan_meier(gen2_resistance_times,
                                           ax=ax[1],
                                           n_sims=n_sims,
                                           label=str(p_drop_t),
                                           mode='resistant')
         
-        ax[2] = plotter.plot_kaplan_meier(pop,
-                                          gen6_resistance_times,
+        ax[2] = pop.plot_kaplan_meier(gen6_resistance_times,
                                           ax=ax[2],
                                           n_sims=n_sims,
                                           label=str(p_drop_t),
@@ -112,6 +110,7 @@ def make_fig(adh_exp=None,suffix=None):
     for a in ax:
         a.spines["right"].set_visible(False)
         a.spines["top"].set_visible(False)
+        a = pop.x_ticks_to_days(a)
         
     ax[0].legend(frameon=False,loc='lower left',title='$p_{forget}$',fontsize=8)
     
@@ -135,43 +134,43 @@ def make_fig(adh_exp=None,suffix=None):
 
 #%%  perform pairwise log-rank tests and compute p values
 
-    analysis_keys = list(km_data.keys()) # endpoints being analyzed
-    experiment_keys = [str(p) for p in p_drop] # experiments performed
+    # analysis_keys = list(km_data.keys()) # endpoints being analyzed
+    # experiment_keys = [str(p) for p in p_drop] # experiments performed
     
-    comparisons = [] # vector of all pairwise comparisons without duplicates
+    # comparisons = [] # vector of all pairwise comparisons without duplicates
     
-    for i in range(len(experiment_keys)):
-        j = i+1
-        while j < len(experiment_keys):
-            pair = (p_drop[i],p_drop[j])
-            j+=1
-            comparisons.append(pair)
+    # for i in range(len(experiment_keys)):
+    #     j = i+1
+    #     while j < len(experiment_keys):
+    #         pair = (p_drop[i],p_drop[j])
+    #         j+=1
+    #         comparisons.append(pair)
     
-    p_values = {'survival':{},
-                'resistance 0010':{},
-                'resistance 0110':{}}
+    # p_values = {'survival':{},
+    #             'resistance 0010':{},
+    #             'resistance 0110':{}}
     
-    for ak in  analysis_keys:
-        for pair in comparisons:
-            key0 = str(pair[0])
-            key1 = str(pair[1])
-            sr = exp_info.log_rank_test(km_data[ak][key0],km_data[ak][key1])
-            p_values[ak][str(pair)] = float(sr.p_value)#*n_tests # Mutliple hypothesis testing correction
+    # for ak in  analysis_keys:
+    #     for pair in comparisons:
+    #         key0 = str(pair[0])
+    #         key1 = str(pair[1])
+    #         sr = exp_info.log_rank_test(km_data[ak][key0],km_data[ak][key1])
+    #         p_values[ak][str(pair)] = float(sr.p_value)#*n_tests # Mutliple hypothesis testing correction
     
-    p_values = pd.DataFrame(p_values)
-    result_path = dir_manager.make_resultspath_absolute(
-        'nonadherance_km_curves_p_values.csv')
+    # p_values = pd.DataFrame(p_values)
+    # result_path = dir_manager.make_resultspath_absolute(
+    #     'nonadherance_km_curves_p_values.csv')
     
-    p_values.to_csv(result_path)
+    # p_values.to_csv(result_path)
     
-if __name__ == '__main__':
-    make_fig() 
+# if __name__ == '__main__':
+#     make_fig() 
 
-def unpack(sim_path):
+# def unpack(sim_path):
 
-    data_dict = pickle.load(open(sim_path,'rb'))
-    counts = data_dict['counts']
-    drug_conc = data_dict['drug_curve']
-    regimen = data_dict['regimen']
+#     data_dict = pickle.load(open(sim_path,'rb'))
+#     counts = data_dict['counts']
+#     drug_conc = data_dict['drug_curve']
+#     regimen = data_dict['regimen']
 
-    return counts, drug_conc, regimen
+#     return counts, drug_conc, regimen

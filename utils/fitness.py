@@ -126,21 +126,21 @@ class Fitness:
         landscape[zero_indx_land] = 0
         return landscape
 
-    def gen_digital_seascape(self,conc,gen,min_fitness=0,pop=None):
+    # def gen_digital_seascape(self,conc,gen,min_fitness=0,pop=None):
 
-        if pop is None:
-            pop = self
+    #     if pop is None:
+    #         pop = self
 
-        if pop.mic_estimate is not None:
-            mic = self.est_mic(pop,gen,Kmic=pop.mic_estimate)
-        else:
-            mic = self.est_mic(pop,gen,growth_rate=pop.death_rate)
+    #     if pop.mic_estimate is not None:
+    #         mic = self.est_mic(pop,gen,Kmic=pop.mic_estimate)
+    #     else:
+    #         mic = self.est_mic(pop,gen,growth_rate=pop.death_rate)
         
-        if conc >= mic:
-            fitness = min_fitness
-        else:
-            fitness = pop.drugless_rates[gen]
-        return fitness
+    #     if conc >= mic:
+    #         fitness = min_fitness
+    #     else:
+    #         fitness = pop.drugless_rates[gen]
+    #     return fitness
 
     def gen_fit_land(self,conc,mode=None,pop=None):
 

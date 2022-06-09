@@ -87,7 +87,7 @@ def make_figure(roc_info_path,adh_info_path):
                    }
     label_kwargs = {'align':False}
     select_labels = [7,15]
-    label_xpos = [900,4500]
+    label_xpos = [900,2500]
     
     data_t = data_t/np.max(data_t)
 
@@ -345,9 +345,21 @@ def make_figure(roc_info_path,adh_info_path):
     
     #%% Adjust x axis tick labels
     
-    xt = ax[0,0].get_xticks()
+    # ax[0,0] = pop_roc.x_ticks_to_days(ax[0,0])
+    time_scale = 24/pop_roc.timestep_scale
+    ax[0,0].set_xticks([0,250*time_scale,500*time_scale])
+    ax[0,0].set_xticklabels([0,250,500])
+
+    # xlim = [0,500*time_scale]
+
+    # ax[0,0].set_xlim(xlim)
+    xt = ax[0,0].get_xticks()    
     xl = ax[0,0].get_xticklabels()
     xlim = ax[0,0].get_xlim()
+
+    ax[0,1].set_xticks(xt)
+    ax[0,1].set_xticklabels(xl)
+    ax[0,1].set_xlim(xlim)
     
     for col in range(0,2):
         ax[1,col] = pop_roc.x_ticks_to_days(ax[1,col])
@@ -414,4 +426,4 @@ def make_figure(roc_info_path,adh_info_path):
 # if __name__ == '__main__':
 #     make_figure()     
 
-make_figure(roc_info_path,adh_info_path)                       
+make_figure(rip,aip)                       
