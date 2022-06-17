@@ -37,7 +37,9 @@ def make_data():
                'timestep_scale':3,
                'plot':False,
             #    'ic50_data':'pyrimethamine_ic50.csv',
-               'fitness_data':'estimate'
+               'fitness_data':'estimate',
+               'null_seascape':True,
+               'null_seascape_dose':1
                }
     
     e = Experiment(max_doses=max_doses,

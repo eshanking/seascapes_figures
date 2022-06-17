@@ -4,6 +4,7 @@ import scipy
 from seascapes_figures.utils import dir_manager, results_manager
 import matplotlib.pyplot as plt
 import os
+from functools import partial
 
 class Fitness:
     
@@ -32,13 +33,13 @@ class Fitness:
         return fc
 
     # compute fitness given a drug concentration
-    def gen_fitness(self,genotype,conc,drugless_rate=None,ic50=None,pop=None):        
+    def gen_fitness(self,genotype,conc,drugless_rate=None,ic50=None,pop=None,hc=None):        
 
         if pop is None:
             pop = self
 
         if pop.fitness_data == 'estimate':
-            fitness = self.sl_to_fitness(genotype,conc)
+            fitness = self.sl_to_fitness(genotype,conc,hc=hc)
             fitness = fitness*(60**2)
 
         else:
@@ -49,7 +50,10 @@ class Fitness:
 
             # logistic equation from Ogbunugafor 2016
             conc = conc/10**6 # concentration in uM, convert to M
-            c = -.6824968 # empirical curve fit
+            if hc is None:
+                c = -.6824968 # empirical curve fit
+            else:
+                c = hc
             log_eqn = lambda d,i: d/(1+np.exp((i-np.log10(conc))/c))
             if conc <= 0:
                 fitness = drugless_rate[genotype]
@@ -142,7 +146,7 @@ class Fitness:
     #         fitness = pop.drugless_rates[gen]
     #     return fitness
 
-    def gen_fit_land(self,conc,mode=None,pop=None):
+    def gen_fit_land(self,conc,mode=None,pop=None,**kwargs):
 
         if pop is None:
             pop = self
@@ -164,7 +168,7 @@ class Fitness:
             else:
                 for kk in range(pop.n_genotype):
                     fit_land[kk] = self.gen_fitness(kk,
-                                            conc)/pop.doubling_time
+                                            conc,**kwargs)/pop.doubling_time
         
         return fit_land
 
@@ -236,42 +240,89 @@ class Fitness:
     def fit_logistic_curve(self,xdata,ydata):
         from scipy.optimize import curve_fit
         
-        popt,var = curve_fit(self.logistic_equation,xdata,ydata)
+        popt,var = curve_fit(self.logistic_equation,xdata,ydata,maxfev=10000)
         
         return popt
 
-    def gen_null_seascape(self,conc,pop=None):
+    def gen_null_seascape(self,conc,pop=None,method='curve_fit'):
 
         if pop is None:
             pop = self
 
-        landscape = self.gen_fit_land(conc,pop=pop)
-        start_rates = self.gen_fit_land(10**-3,pop=pop)
-        final_rates = self.gen_fit_land(10**5,pop=pop)
-        # mid_rates = gen_fit_land(pop,10**1)
+        if method == 'curve_fit':
+            if pop.fitness_data == 'estimate':
+                hc = 0
+                for key in pop.seascape_library.keys():
+                    hc += pop.seascape_library[key]['hill_coeff']
+                hc = hc/(len(pop.seascape_library.keys()))
+
+                landscape = self.gen_fit_land(conc,pop=pop,hc=hc)
+                start_rates = self.gen_fit_land(10**-3,pop=pop,hc=hc)
+                final_rates = self.gen_fit_land(10**5,pop=pop,hc=hc)
+
+            else:
+                landscape = self.gen_fit_land(conc,pop=pop)
+                start_rates = self.gen_fit_land(10**-3,pop=pop)
+                final_rates = self.gen_fit_land(10**5,pop=pop)
+            # mid_rates = gen_fit_land(pop,10**1)
+            
+            start_points = self.scale_and_ignore_zeros(landscape,start_rates)
+            end_points = self.scale_and_ignore_zeros(landscape,final_rates)
+            # mid_points = scale_and_ignore_zeros(landscape,mid_rates)
+            mid_points = landscape
+            
+            xdata = [10**-3,conc,10**5]
+            
+            ic50_new = []
+            drugless_rates_new = []
+            
+            for genotype in range(len(landscape)):
+                ydata = [start_points[genotype],
+                        mid_points[genotype],
+                        end_points[genotype]]
+                params = self.fit_logistic_curve(xdata,ydata)
+                ic50_new.append(params[1])
+                drugless_rates_new.append(params[0])
+            # find the null landscape drugless rates
+            
+            drugless_rates_new = self.scale_and_ignore_zeros(drugless_rates_new,
+                                                        pop.drugless_rates)
+
+            # fix the fact that genotype 3 in ogbunugafor data has zero fitness
+            if hasattr(pop,'ic50_data'):
+                if pop.ic50_data[-22:] == 'pyrimethamine_ic50.csv':
+                    ic50_new[3] = 0
+                    drugless_rates_new[3] = 0
         
-        start_points = self.scale_and_ignore_zeros(landscape,start_rates)
-        end_points = self.scale_and_ignore_zeros(landscape,final_rates)
-        # mid_points = scale_and_ignore_zeros(landscape,mid_rates)
-        mid_points = landscape
-        
-        xdata = [10**-3,conc,10**5]
-        
-        ic50_new = []
-        drugless_rates_new = []
-        
-        for genotype in range(len(landscape)):
-            ydata = [start_points[genotype],
-                    mid_points[genotype],
-                    end_points[genotype]]
-            params = self.fit_logistic_curve(xdata,ydata)
-            ic50_new.append(params[1])
-            drugless_rates_new.append(params[0])
-        # find the null landscape drugless rates
-        
-        drugless_rates_new = self.scale_and_ignore_zeros(drugless_rates_new,
-                                                    pop.drugless_rates)
-        
+        elif method == 'sort':
+            print('here2')
+            dr =  np.array(pop.drugless_rates)
+            ic50 = np.array(pop.ic50)
+            dr_t = dr.argsort()
+            dr_ranks = np.empty_like(dr_t)
+            dr_ranks[dr_t] = np.arange(len(dr))
+
+            ic50_t = ic50.argsort()
+            ic50_ranks = np.empty_like(ic50_t)
+            ic50_ranks[ic50_t] = np.arange(len(ic50))
+
+            ic50_new = np.zeros(len(dr))
+            k = 0
+            for g in dr_ranks:
+                indx = np.argwhere(ic50_ranks==g)
+                indx = indx[0][0]
+                ic50_new[k] = ic50[indx]
+                k+=1
+
+            drugless_rates_new = dr
+
+        if self.fitness_data == 'estimate':
+            i = 0
+            for key in self.seascape_library.keys():
+                self.seascape_library[key]['ic50'] = ic50_new[i]
+                self.seascape_library[key]['g_drugless'] = drugless_rates_new[i]
+                i+=1
+
         return drugless_rates_new,ic50_new
 
     def scale_and_ignore_zeros(self,data,target):
@@ -518,19 +569,24 @@ class Fitness:
         sl = {}
         dc = gl['drug_conc']
         
+        res = self.estimate_hill_coeff()
+        hc = res.x
+
+        # hc = -0.28
+
         for g in range(pop.n_genotype):
-            popt = self.fit_hill_curve(dc,gl[str(g)],debug=debug)
+            popt = self.fit_hill_curve(dc,gl[str(g)],debug=debug,hc=hc)
             ic50 = popt[0]
             g_drugless = popt[1]
-            hill_coeff = popt[2]
+            # hill_coeff = popt[2]
             d_t = {'ic50':ic50,
                 'g_drugless':g_drugless,
-                'hill_coeff':hill_coeff}
+                'hill_coeff':hc}
             sl[str(g)] = d_t
 
         return sl
         
-    def sl_to_fitness(self,g,conc,pop=None):
+    def sl_to_fitness(self,g,conc,hc=None,pop=None):
         """Seascape library to fitness value (in units per second)
 
         Args:
@@ -548,7 +604,11 @@ class Fitness:
         ic50 = pop.seascape_library[str(g)]['ic50']
         
         g_drugless = pop.seascape_library[str(g)]['g_drugless']
-        hc = pop.seascape_library[str(g)]['hill_coeff']
+
+        if hc is None:
+            hc = pop.seascape_library[str(g)]['hill_coeff']
+        
+        # hc = -0.28
 
         f = self.logistic_pharm_curve(conc,ic50,g_drugless,hc)
         return f
@@ -703,7 +763,121 @@ class Fitness:
 
         return r
 
-    def fit_hill_curve(self,xdata,ydata,debug=False):
+    def seascape_loss(self,x0,gr_lib=None):
+        """Calculates the loss for the entire fitness seascape based on the sum of the absolute value of the difference
+
+        Args:
+            x0 (list or array): hill paramters: ic50, g_drugless, and hill coefficient (in that order)
+            gr_lib (dict, optional): Growth rate library. Defaults to None.
+
+        Returns:
+            float: loss
+        """
+        if gr_lib is None:
+            gr_lib = self.growth_rate_library
+
+        drug_conc = gr_lib['drug_conc']
+
+        genotype_keys = [key for key in gr_lib.keys() if key.isnumeric()]
+
+        loss = np.zeros(len(genotype_keys))
+
+        ic50_est = x0[0]
+        g_drugless_est = x0[1]
+        hc_est = x0[2]
+
+        g = 0
+        for key in genotype_keys:
+            ic50_t = ic50_est[g]
+            gd_t = g_drugless_est[g]
+            l = 0
+            for c in range(len(drug_conc)):
+
+                gr_est = self.logistic_pharm_curve(float(c),ic50_t,gd_t,hc_est)
+                gr_vect = gr_lib[key]
+
+                l += np.abs(gr_est - gr_vect[c])
+            
+            loss[g] = l
+            g+=1
+
+        return sum(loss)
+    
+    def hill_curve_loss(self,genotype,x0,gr_lib=None,hc_est=None):
+        """Calculates the loss for an individual hill curve based on the absolute value of the difference
+
+        Args:
+            genotype (int): genotype whose loss you want to calculate
+            x0 (list or array): hill paramters: ic50, g_drugless, and hill coefficient (in that order)
+            gr_lib (dict, optional): Growth rate library. Defaults to None.
+            hc_est (float, optional): Hill coefficient estimate. Defaults to None.
+
+        Returns:
+            flaot: loss
+        """
+        if gr_lib is None:
+            gr_lib = self.growth_rate_library
+
+        drug_conc = gr_lib['drug_conc']
+
+        ic50_est = x0[0]
+        g_drugless_est = x0[1]
+
+        if hc_est is None:
+            hc_est = x0[2]
+        l=0
+        for c in range(len(drug_conc)):
+
+            gr_est = self.logistic_pharm_curve(float(c),ic50_est,g_drugless_est,hc_est)
+            # plt.plot(gr_est)
+            gr_vect = gr_lib[str(genotype)]
+
+            l += np.abs(gr_est - gr_vect[c])
+
+        return l
+
+    def hill_coeff_loss(self,hc):
+        """Calculates the loss across the entire seascape for a given hill coefficient.
+           Estimates best hill parameters for a given hill coefficient.
+
+        Args:
+            hc (float): Hill coefficient
+
+        Returns:
+            float: loss
+        """
+        # estimates the loss for different hill coefficients
+        # hc = np.zeros(self.n_genotype)
+
+        xdata = self.growth_rate_library['drug_conc']
+        loss = 0
+
+        for g in range(self.n_genotype):
+            # print(g)
+            ydata = self.growth_rate_library[str(g)]
+            popt = self.fit_hill_curve(xdata,ydata,hc=hc)
+
+            x0 = [popt[0],popt[1]]
+
+            loss += self.hill_curve_loss(g,x0,hc_est=hc)
+
+
+        # loss = self.hill_curve_loss(x0)
+
+        return loss
+
+    def estimate_hill_coeff(self):
+        """Uses scipy minimize_scalar to estimate the hill coefficient for a seascape
+
+        Returns:
+            float: optimized hill coefficient
+        """
+        hc = scipy.optimize.minimize_scalar(self.hill_coeff_loss,bounds=[-10,-0.01],method='bounded')
+
+        return hc
+    
+
+    def fit_hill_curve(self,xdata,ydata,debug=False,hc=None):
 
         # interpolate data
         xd_t = xdata
@@ -722,18 +896,35 @@ class Fitness:
 
         ydata = f(xdata)
 
+        if hc is not None:
+            p0 = [0,ydata[0]]
+
+            # print(p0)
+
+            if ydata[0] == 0:
+                g_drugless_bound = [0,1]
+            else:
+                # want the estimated drugless growth rate to be very close to the value given in ydata
+                g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
+
+            fitfun = partial(self.logistic_pharm_curve_vectorized,hill_coeff=hc)
+
+            bounds = ([-5,g_drugless_bound[0]],[4,g_drugless_bound[1]])
+            popt, pcov = scipy.optimize.curve_fit(fitfun,
+                                                xdata,ydata,p0=p0,bounds=bounds)
         
-        p0 = [0,ydata[0],-0.08]
-
-        if ydata[0] == 0:
-            g_drugless_bound = [0,1]
         else:
-            # want the estimated drugless growth rate to be very close to the value given in ydata
-            g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
+            p0 = [0,ydata[0],-0.08]
 
-        bounds = ([-5,g_drugless_bound[0],-1],[4,g_drugless_bound[1],-0.001])
-        popt, pcov = scipy.optimize.curve_fit(self.logistic_pharm_curve_vectorized,
-                                            xdata,ydata,p0=p0,bounds=bounds)
+            if ydata[0] == 0:
+                g_drugless_bound = [0,1]
+            else:
+                # want the estimated drugless growth rate to be very close to the value given in ydata
+                g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
+
+            bounds = ([-5,g_drugless_bound[0],-1],[4,g_drugless_bound[1],-0.001])
+            popt, pcov = scipy.optimize.curve_fit(self.logistic_pharm_curve_vectorized,
+                                                xdata,ydata,p0=p0,bounds=bounds)
 
         if debug:
             est = [self.logistic_pharm_curve(x,popt[0],popt[1],popt[2]) for x in xdata]

@@ -131,6 +131,7 @@ class Population(fitness.Fitness,plotter.Plotter):
                  timestep_scale = 1,
                  x_lim = None, # plotting
                  y_lim = None, # plotting
+                 null_seascape_method = 'curve_fit',
                  **kwargs
                  ):
         """
@@ -241,6 +242,16 @@ class Population(fitness.Fitness,plotter.Plotter):
             self.n_genotype = len(self.growth_rate_library.keys()) - 1
 
             self.seascape_library = self.gen_seascape_library(self)
+
+            self.ic50 = np.zeros(self.n_genotype)
+            self.drugless_rates = np.zeros(self.n_genotype)
+
+            i = 0
+            for key in self.seascape_library.keys():
+                self.ic50[i] = self.seascape_library[key]['ic50']
+                self.drugless_rates[i] = self.seascape_library[key]['g_drugless']
+                i+=1
+
             
         # Initial number of cells (default = 10,000 at 0000)
         if init_counts is None:
@@ -303,10 +314,13 @@ class Population(fitness.Fitness,plotter.Plotter):
            self.x_lim = x_lim 
         self.y_lim = y_lim
         self.entropy_lim = entropy_lim
-        
+
+        self.null_seascape = null_seascape    
         if null_seascape:
+    
             self.null_seascape_dose=null_seascape_dose
-            self.set_null_seascape(self.null_seascape_dose)
+            self.null_seascape_method = null_seascape_method
+            self.set_null_seascape(self.null_seascape_dose,method=null_seascape_method)
         
         if passage:
             if not np.mod(passage_time,timestep_scale) == 0:
@@ -569,8 +583,9 @@ class Population(fitness.Fitness,plotter.Plotter):
     #     drugless_rates_new,ic50_new = fitness.gen_null_seascape(self,conc)
     #     return drugless_rates_new,ic50_new
     
-    def set_null_seascape(self,conc):
-        self.drugless_rates,self.ic50 = self.gen_null_seascape(conc)
+    def set_null_seascape(self,conc,method='curve_fit'):
+
+        self.drugless_rates,self.ic50 = self.gen_null_seascape(conc,method=method)
     
 ###############################################################################
 # Wrapper methods for generating drug concentration curves

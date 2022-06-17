@@ -205,7 +205,8 @@ class Plotter():
 
                     for c in xdata:
                         
-                        f_t = pop.logistic_pharm_curve(c,ic50,sl_t['g_drugless'],sl_t['hill_coeff'])
+                        # f_t = pop.logistic_pharm_curve(c,ic50,sl_t['g_drugless'],sl_t['hill_coeff'])
+                        f_t = pop.sl_to_fitness(g,c)
                         f_t = f_t*(60**2)
                         f.append(f_t)
                         
