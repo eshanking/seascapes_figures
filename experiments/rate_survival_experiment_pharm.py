@@ -26,7 +26,7 @@ def make_data():
                'mut_rate':1.4*10**-8,
                'carrying_cap':True,
                'max_cells':10**11,
-               'n_timestep':2920,
+               'n_timestep':5840,
                'init_counts':init_counts,
                # 'k_abs':0.95,
                # 'k_elim':0.00839,
@@ -37,7 +37,9 @@ def make_data():
                'timestep_scale':3,
                'plot':False,
             #    'ic50_data':'pyrimethamine_ic50.csv',
-               'fitness_data':'estimate'
+               'fitness_data':'estimate',
+               'null_seascape':True,
+               'null_seascape_dose':1
                }
     
     e = Experiment(max_doses=max_doses,

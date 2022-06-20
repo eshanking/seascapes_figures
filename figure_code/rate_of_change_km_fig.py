@@ -184,8 +184,8 @@ def make_fig(roc_exp=None,exp_info_path=None):
     
     p_values.to_csv(result_path)
 #%%
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    eip = '/Users/kinge2/repos/seascapes_figures/results/results_01212022_0003/experiment_info_01212022_0003.p'    
-    make_fig(exp_info_path=eip)
-#%%     
+#     eip = '/Users/kinge2/repos/seascapes_figures/results/results_01212022_0003/experiment_info_01212022_0003.p'    
+#     make_fig(exp_info_path=eip)
+# #%%     
