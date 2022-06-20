@@ -216,6 +216,7 @@ class Experiment():
             self.slopes = slopes
             for slope in self.slopes:
                 if curve_types[0] == 'pharm':
+                    # print(population_options)
                     self.populations.append(Population(max_dose=self.max_doses[0],
                                                         k_abs=slope,
                                                         curve_type='pharm',
@@ -224,6 +225,7 @@ class Experiment():
                                                         passage_time=passage_time,
                                                         **self.population_options))
                 elif curve_types[0] == 'pulsed':
+                    # print(population_options)
                     self.populations.append(Population(max_dose=self.max_doses[0],
                                                         k_abs=slope,
                                                         curve_type='pulsed',

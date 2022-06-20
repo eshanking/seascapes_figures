@@ -39,6 +39,7 @@ class Fitness:
             pop = self
 
         if pop.fitness_data == 'estimate':
+
             fitness = self.sl_to_fitness(genotype,conc,hc=hc)
             fitness = fitness*(60**2)
 

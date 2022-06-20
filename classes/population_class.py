@@ -442,6 +442,13 @@ class Population(fitness.Fitness,plotter.Plotter):
         fit_land = self.__gen_fl_for_abm(conc, counts)
         
         fit_land = fit_land*self.timestep_scale
+
+        # most_fit = np.argwhere(fit_land == max(fit_land))
+        # most_fit = most_fit[0][0]
+        # print(self.int_to_binary(most_fit))
+        # print(max(fit_land))
+        # print(conc)
+
         death_rate = self.death_rate*self.timestep_scale
         mut_rate = self.mut_rate*self.timestep_scale
             
