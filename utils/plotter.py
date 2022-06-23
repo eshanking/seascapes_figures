@@ -1,5 +1,5 @@
 import sys
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pltj
 from cycler import cycler
 import seaborn as sns
 import numpy as np
