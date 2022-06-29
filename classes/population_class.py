@@ -448,6 +448,11 @@ class Population(fitness.Fitness,plotter.Plotter):
         # print(self.int_to_binary(most_fit))
         # print(max(fit_land))
         # print(conc)
+        # print(sum(counts))
+
+        # if np.mod(mm,100) == 0:
+        #     input("Press Enter to continue...")
+
 
         death_rate = self.death_rate*self.timestep_scale
         mut_rate = self.mut_rate*self.timestep_scale

@@ -85,8 +85,11 @@ def make_fig(roc_exp=None,exp_info_path=None):
                 exp_info.resistance_time(pop,data,15,thresh=.1)
                 
             k+=1
-
+            # print(k_abs_t)
+            # print(gen15_resistance_times[k])
         # get lenth of analysis time
+        # print(gen7_resistance_times)
+
         tmax = int(pop.n_timestep)
 
         ax[0] = pop.plot_kaplan_meier(death_event_times,
@@ -118,7 +121,8 @@ def make_fig(roc_exp=None,exp_info_path=None):
         a.spines["right"].set_visible(False)
         a.spines["top"].set_visible(False)
         
-    ax[2].legend(frameon=False,loc='upper left',title='$k_{abs}$',fontsize=8)
+    # ax[2].legend(frameon=False,loc=[-2,-0.5],title='$k_{abs}$',fontsize=8,ncol=4)
+    ax[2].legend(frameon=False,loc=[1.1,.3],title='$k_{abs}$',fontsize=8,ncol=1)
     
     pad = 0.05
     
@@ -183,10 +187,12 @@ def make_fig(roc_exp=None,exp_info_path=None):
         'rate_of_change_km_curves_p_values.csv')
     
     p_values.to_csv(result_path)
+
+    return fig, ax
 #%%
 if __name__ == '__main__':
 
-    eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06172022_0000/experiment_info_06172022_0000.p'
+    eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06222022_0000/experiment_info_06222022_0000.p'
+    # eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06222022_0001/experiment_info_06222022_0001.p'
     make_fig(exp_info_path=eip)
 #%%     
-

@@ -39,7 +39,6 @@ class Fitness:
             pop = self
 
         if pop.fitness_data == 'estimate':
-
             fitness = self.sl_to_fitness(genotype,conc,hc=hc)
             fitness = fitness*(60**2)
 
@@ -296,7 +295,6 @@ class Fitness:
                     drugless_rates_new[3] = 0
         
         elif method == 'sort':
-            print('here2')
             dr =  np.array(pop.drugless_rates)
             ic50 = np.array(pop.ic50)
             dr_t = dr.argsort()

@@ -77,7 +77,7 @@ def make_fig(adh_exp=None,exp_info_path=None):
                 exp_info.extinction_time(pop,data,thresh=1)
                 
             gen6_resistance_obs[k],gen6_resistance_times[k] = \
-                exp_info.resistance_time(pop,data,6,thresh=.1)
+                exp_info.resistance_time(pop,data,7,thresh=.1)
     
             gen2_resistance_obs[k],gen2_resistance_times[k] = \
                 exp_info.resistance_time(pop,data,2,thresh=.1)
@@ -89,7 +89,7 @@ def make_fig(adh_exp=None,exp_info_path=None):
                                           n_sims=n_sims,
                                           label=str(p_drop_t),
                                           mode='survival')
-        
+
         ax[1] = pop.plot_kaplan_meier(gen2_resistance_times,
                                           ax=ax[1],
                                           n_sims=n_sims,
@@ -110,7 +110,7 @@ def make_fig(adh_exp=None,exp_info_path=None):
     for a in ax:
         a.spines["right"].set_visible(False)
         a.spines["top"].set_visible(False)
-        a = pop.x_ticks_to_days(a)
+        # a = pop.x_ticks_to_days(a)
         
     ax[0].legend(frameon=False,loc='lower left',title='$p_{forget}$',fontsize=8)
     
@@ -131,6 +131,8 @@ def make_fig(adh_exp=None,exp_info_path=None):
     ax[1].set_title('Resistant genotype = 0010',fontsize=8)
     ax[2].set_title('Resistant genotype = 0110',fontsize=8)
     results_manager.save_fig(fig,'nonadherance_km_curve.pdf',bbox_inches='tight')
+
+    return
 
 #%%  perform pairwise log-rank tests and compute p values
 

@@ -556,10 +556,11 @@ class Experiment():
             event_time = len(c)
         else:
             event_obs = 1
-            event_time = e[0]
+            event_time = e[0][0]
         
-        timestep_scale = pop.timestep_scale
-        event_time = event_time*timestep_scale
+        # timestep_scale = pop.timestep_scale
+        # event_time = event_time*timestep_scale
+        
         
         return event_obs, event_time
     
@@ -579,11 +580,11 @@ class Experiment():
             event_time = len(c)
         else:
             event_obs = 1
-            event_time = e[0]
+            event_time = e[0][0]
         
-        timestep_scale = pop.timestep_scale
-        event_time = event_time*timestep_scale
-        
+        # timestep_scale = pop.timestep_scale
+        # event_time = event_time*timestep_scale
+        # print(event_time)
         return event_obs, event_time
     
     def log_rank_test(self,durations_A, durations_B, 

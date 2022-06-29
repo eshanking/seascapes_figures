@@ -5,7 +5,7 @@ def make_data():
     np.random.seed(2021)
     
     init_counts = np.zeros(16)
-    init_counts[0] = 10**11
+    init_counts[0] = 10**10
     
     options = {'doubling_time':1,
                'death_rate':0.0144,
@@ -16,7 +16,7 @@ def make_data():
                'init_counts':init_counts,
                'k_abs':0.95,
                'k_elim':0.00839,
-               'max_dose':5,
+               'max_dose':2,
                'dose_schedule':24,
                'pad_right':True,
                'timestep_scale':2,
@@ -27,7 +27,7 @@ def make_data():
     # p = np.array([0.6])
     # p = np.array([0.8])
     # n_sims = 500
-    n_sims = 100
+    n_sims = 500
     
     experiment_type = 'drug-regimen'
     

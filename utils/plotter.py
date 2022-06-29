@@ -1,5 +1,5 @@
 import sys
-import matplotlib.pyplot as pltj
+import matplotlib.pyplot as plt
 from cycler import cycler
 import seaborn as sns
 import numpy as np
@@ -953,8 +953,10 @@ class Plotter():
         survival_curve = np.ones(t_max)*100
         
         for t in range(len(survival_curve)-1):
+
             if t>0:
                 survival_curve[t] = survival_curve[t-1]
+
             if any(event_times==t):
                 num = np.argwhere(event_times==t)
                 num = num.shape[0]
@@ -983,22 +985,23 @@ class Plotter():
                 q = 1-p
                 # standard deviation of the estimator of the parameter of a binomial distribution
                 err[t] = 100*(p*q/n)**0.5 #
+        
         t = np.arange(t_max)
         
         ax.fill_between(t,survival_curve-err,survival_curve+err,alpha=0.4)
         
-        xticks = ax.get_xticks()
-        xlabels = xticks
-        # xlabels = (xlabels/24)/pop.timestep_scale
-        xlabels = np.array(xlabels).astype('int')
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(xlabels)
+        # xticks = ax.get_xticks()
+        # xlabels = xticks
+        # # xlabels = (xlabels/24)/pop.timestep_scale
+        # xlabels = np.array(xlabels).astype('int')
+        # ax.set_xticks(xticks)
+        # ax.set_xticklabels(xlabels)
         
-        xl = [0,len(survival_curve)]
-        ax.set_xlim(xl)
-        ax.set_ylim([0,100])
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel('Days')
+        # xl = [0,len(survival_curve)]
+        # ax.set_xlim(xl)
+        # ax.set_ylim([0,100])
+        # ax.set_ylabel(ylabel)
+        # ax.set_xlabel('Days')
         return ax
 
     def get_msw(self,wt_fitness_curve,cur_fitness_curve,conc):
