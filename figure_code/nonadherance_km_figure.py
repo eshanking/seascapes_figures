@@ -29,6 +29,7 @@ def make_fig(adh_exp=None,exp_info_path=None):
     exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
 
     max_cells = exp_info.populations[0].max_cells
+    n_timestep = exp_info.population_options['n_timestep']
     n_sims = exp_info.n_sims
     p_drop = exp_info.prob_drops
     
@@ -41,6 +42,8 @@ def make_fig(adh_exp=None,exp_info_path=None):
                'resistance 0010':{},
                'resistance 0110':{}}
     #%%
+
+
     for exp in exp_folders:
         
         p_drop_t = exp[exp.find('=')+1:]
@@ -62,10 +65,11 @@ def make_fig(adh_exp=None,exp_info_path=None):
         gen2_resistance_times = np.zeros(n_sims)
         
         # time to genotype 6
-        gen6_resistance_obs = np.zeros(n_sims)
-        gen6_resistance_times = np.zeros(n_sims)
+        gen7_resistance_obs = np.zeros(n_sims)
+        gen7_resistance_times = np.zeros(n_sims)
         
         k=0
+
         while k < len(sim_files):
         # while k < 10:
             sim = sim_files[k]
@@ -76,14 +80,15 @@ def make_fig(adh_exp=None,exp_info_path=None):
             death_event_obs[k],death_event_times[k] = \
                 exp_info.extinction_time(pop,data,thresh=1)
                 
-            gen6_resistance_obs[k],gen6_resistance_times[k] = \
+            gen7_resistance_obs[k],gen7_resistance_times[k] = \
                 exp_info.resistance_time(pop,data,7,thresh=.1)
     
             gen2_resistance_obs[k],gen2_resistance_times[k] = \
                 exp_info.resistance_time(pop,data,2,thresh=.1)
                 
             k+=1
-            
+
+        
         ax[0] = pop.plot_kaplan_meier(death_event_times,
                                           ax=ax[0],
                                           n_sims=n_sims,
@@ -96,23 +101,26 @@ def make_fig(adh_exp=None,exp_info_path=None):
                                           label=str(p_drop_t),
                                           mode='resistant')
         
-        ax[2] = pop.plot_kaplan_meier(gen6_resistance_times,
+        ax[2] = pop.plot_kaplan_meier(gen7_resistance_times,
                                           ax=ax[2],
                                           n_sims=n_sims,
                                           label=str(p_drop_t),
                                           mode='resistant')
         
+        # ax[0].set_yscale('log')
+
         km_data['survival'][str(p_drop_t)] = death_event_times
         km_data['resistance 0010'][str(p_drop_t)] = gen2_resistance_times
-        km_data['resistance 0110'][str(p_drop_t)] = gen6_resistance_times
+        km_data['resistance 0110'][str(p_drop_t)] = gen7_resistance_times
             
     
     for a in ax:
         a.spines["right"].set_visible(False)
         a.spines["top"].set_visible(False)
-        # a = pop.x_ticks_to_days(a)
+        a = pop.x_ticks_to_days(a)
+        a.set_xlabel('Days')
         
-    ax[0].legend(frameon=False,loc='lower left',title='$p_{forget}$',fontsize=8)
+    ax[2].legend(frameon=False,loc=[1.1,.3],title='$k_{abs}$',fontsize=8,ncol=1)
     
     pad = 0.05
     
@@ -129,7 +137,7 @@ def make_fig(adh_exp=None,exp_info_path=None):
     
     ax[0].set_title('Survival of infectious agent',fontsize=8)
     ax[1].set_title('Resistant genotype = 0010',fontsize=8)
-    ax[2].set_title('Resistant genotype = 0110',fontsize=8)
+    ax[2].set_title('Resistant genotype = 0111',fontsize=8)
     results_manager.save_fig(fig,'nonadherance_km_curve.pdf',bbox_inches='tight')
 
     return

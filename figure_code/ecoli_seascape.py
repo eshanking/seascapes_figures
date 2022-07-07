@@ -5,7 +5,7 @@ import numpy as np
 
 p = Population(fitness_data='estimate')
 
-fig,ax = plt.subplots(figsize=(6,4))
+fig,ax = plt.subplots(figsize=(6,3))
 
 fig,ax = p.plot_fitness_curves()
 
@@ -46,4 +46,4 @@ ax.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=20)
 ax.set_xlabel('Drug concentration (μg/mL)',fontsize=20)
 
 ax.set_xlim([10**-2.7,10**3])
-# results_manager.save_fig(fig,'ecoli_seascape_with_landscapes.pdf')
+results_manager.save_fig(fig,'ecoli_seascape_with_landscapes.pdf')
