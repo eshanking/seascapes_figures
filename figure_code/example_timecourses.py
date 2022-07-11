@@ -1,4 +1,5 @@
 import os
+from turtle import right
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -6,6 +7,121 @@ from seascapes_figures.utils import results_manager, plotter
 
 def load_exp_info(info_path):
     return pickle.load(open(info_path, 'rb'))
+
+def most_fit_at_conc(dc,pop):
+    
+    # for each point in the drug concentration curve, what is the most fit genotype
+    mf = np.zeros(len(dc))
+
+    for c in range(len(dc)):
+
+        conc = dc[c]
+        p_fit_list = p.gen_fit_land(conc)
+        mf[c] = (np.argmax(p_fit_list))
+    
+    return mf
+
+def detect_changes(mf):
+    
+    x = 0
+    chunks = []
+
+    last_most_fit = mf[0]
+    new_chunk = False
+    left_indx = 0
+
+    while x < len(mf):
+        cur_most_fit = mf[x]
+        if last_most_fit != cur_most_fit:
+
+            right_indx = x
+            chunks.append((left_indx,right_indx))
+            left_indx = x
+
+        x+=1
+        last_most_fit = cur_most_fit
+    
+    chunks.append((right_indx,len(mf)))
+    
+    return chunks
+
+def plot_drug_curve(ax,dc,mf,chunks,colors):
+    
+    for chunk in chunks:
+        x = np.arange(chunk[0],chunk[1])
+        dc_t = dc[chunk[0]:chunk[1]]
+
+        most_fit = mf[chunk[0]]
+        color = colors[int(most_fit)]
+        ax.plot(x,dc_t,color=color,linewidth=1)
+    
+    return ax
+
+def find_extinct(exp_folders,n_sims):
+    found_extinct = False
+
+    exp_num = 0
+    while exp_num < len(exp_folders) and found_extinct == False:
+        exp = exp_folders[exp_num]
+        sim_files = os.listdir(path=exp)
+        sim_files = sorted(sim_files)
+
+        k = 0
+
+        while k < n_sims and found_extinct == False:
+            sim = sim_files[k]
+            sim = exp + os.sep + sim
+            # print(sim)
+            data = results_manager.get_data(sim)
+            # data = data[:,0:-1]
+            # data_t = data[-1,:]
+            data_t = data['counts']
+            # pop_roc.plot_timecourse(counts_t = data_t)
+            data_t = np.sum(data_t,axis=1)
+            # print(data_t)
+            data_t = data_t[-1]
+            # print(data_t)
+            if data_t == 0:
+                sim_num = k
+                return exp, exp_num, sim_num
+
+            k+=1
+        exp_num += 1
+
+
+
+def find_survived(exp_folders,n_sims):
+    
+    found_survived = False
+
+    exp_num = 0
+    while exp_num < len(exp_folders) and found_survived == False:
+        exp = exp_folders[exp_num]
+        sim_files = os.listdir(path=exp)
+        sim_files = sorted(sim_files)
+
+        k = 0
+
+        while k < n_sims and found_survived == False:
+            sim = sim_files[k]
+            sim = exp + os.sep + sim
+            # print(sim)
+            data = results_manager.get_data(sim)
+            # data = data[:,0:-1]
+            # data_t = data[-1,:]
+            data_t = data['counts']
+            # pop_roc.plot_timecourse(counts_t = data_t)
+            data_t = np.sum(data_t,axis=1)
+            # print(data_t)
+            data_t = data_t[-1]
+            # print(data_t)
+            if data_t > 10**5:
+                sim_num = k
+                return exp, exp_num, sim_num
+
+            k+=1
+        exp_num += 1
+
 
 # def make_figure(roc_exp,adh_exp):
 def make_figure(roc_info_path,adh_info_path):
@@ -29,7 +145,6 @@ def make_figure(roc_info_path,adh_info_path):
     # n_sims = exp_info.n_sims
     # k_abs = exp_info.slopes
     
-    exp_num = 1
     pop_roc = exp_info.populations[0]
     
 
@@ -41,38 +156,84 @@ def make_figure(roc_info_path,adh_info_path):
     found_survived = False
 
     n_sims = roc_exp.n_sims
-    
-    while found_extinct == False or found_survived == False:
-        # while exp_num < len(exp_folders):
-        exp = exp_folders[exp_num]
-        sim_files = os.listdir(path=exp)
-        sim_files = sorted(sim_files)
-        k = 0
 
-        while k < n_sims:
-            sim = sim_files[k]
-            sim = exp + os.sep + sim
-            data = results_manager.get_data(sim)
-            # data = data[:,0:-1]
-            # data_t = data[-1,:]
-            data_t = data['counts']
-            data_t = data_t[-1,:]
-            if any(data_t >= 1):
-                num_survived = k
-                found_survived = True
-            else:
-                num_extinct = k
-                # exp_extinct = exp_num
-                found_extinct = True
-            k+=1
-            # exp_num += 1
+    # find a simulation that survived
+
+    survived_exp, survived_exp_num, num_survived = find_survived(exp_folders,n_sims)
+
+    extinct_exp, extinct_exp_num, num_extinct = find_extinct(exp_folders,n_sims)
+
+
+    # exp_num = 0
+    # while exp_num < len(exp_folders) and found_survived == False:
+    #     exp = exp_folders[exp_num]
+    #     sim_files = os.listdir(path=exp)
+    #     sim_files = sorted(sim_files)
+
+    #     k = 0
+
+    #     while k < n_sims and found_survived == False:
+    #         sim = sim_files[k]
+    #         sim = exp + os.sep + sim
+    #         # print(sim)
+    #         data = results_manager.get_data(sim)
+    #         # data = data[:,0:-1]
+    #         # data_t = data[-1,:]
+    #         data_t = data['counts']
+    #         data_t = data_t[-1,:]
+    #         # print(data_t)
+    #         if any(data_t >= 1):
+    #             survived_exp = exp
+    #             num_survived = k
+    #             found_survived = True
+    #         # else:
+    #         #     extinct_exp = exp
+    #         #     num_extinct = k
+    #         #     # exp_extinct = exp_num
+    #         #     found_extinct = True
+    #         k+=1
+    #     exp_num += 1
+
+    # # find a simulation that went extinct
+
+    # exp_num = 0
+    # while exp_num < len(exp_folders) and found_extinct == False:
+    #     exp = exp_folders[exp_num]
+    #     sim_files = os.listdir(path=exp)
+    #     sim_files = sorted(sim_files)
+
+    #     k = 0
+
+    #     while k < n_sims and found_extinct == False:
+    #         sim = sim_files[k]
+    #         sim = exp + os.sep + sim
+    #         # print(sim)
+    #         data = results_manager.get_data(sim)
+    #         # data = data[:,0:-1]
+    #         # data_t = data[-1,:]
+    #         data_t = data['counts']
+    #         # pop_roc.plot_timecourse(counts_t = data_t)
+    #         data_t = np.sum(data_t,axis=1)
+    #         # print(data_t)
+    #         data_t = data_t[-1]
+    #         # print(data_t)
+    #         if data_t == 0:
+    #             extinct_exp = exp
+    #             num_extinct = k
+    #             found_extinct = True
+
+    #         k+=1
+    #     exp_num += 1
 
 
     #%%
     # plot ROC survived timecourse
     
+    sim_files = os.listdir(path=survived_exp)
+    sim_files = sorted(sim_files)
     sim = sim_files[num_survived]
-    sim = exp + os.sep + sim
+    sim = survived_exp + os.sep + sim
+    
     data = results_manager.get_data(sim)
     dc = data['drug_curve']
     # data = data[:,0:-1]
@@ -87,7 +248,7 @@ def make_figure(roc_info_path,adh_info_path):
                    }
     label_kwargs = {'align':False}
     select_labels = [7,15]
-    label_xpos = [900,2500]
+    label_xpos = [800,2400]
     
     data_t = data_t/np.max(data_t)
 
@@ -108,14 +269,23 @@ def make_figure(roc_info_path,adh_info_path):
                                         label_kwargs=label_kwargs
                                         )
     drug_ax = ax[1,0]
-    drug_ax.plot(dc,color='black',linewidth=1)
+
+    # drug_ax.plot(dc,color='black',linewidth=1)
+    mf = most_fit_at_conc(dc,roc_exp.populations[survived_exp_num])
+    chunks = detect_changes(mf)
+    cc = p.gen_color_cycler()
+    cc_dict = cc.by_key()
+    colors = cc_dict['color']
+
+    drug_ax = plot_drug_curve(drug_ax,dc,mf,chunks,colors)
     # drug_ax.set_yticklabels('')
     # drug_ax.set_yticks([])
     
     #%% plot ROC extinct timecourse
-    
+    sim_files = os.listdir(path=extinct_exp)
+    sim_files = sorted(sim_files)
     sim = sim_files[num_extinct]
-    sim = exp + os.sep + sim
+    sim = extinct_exp + os.sep + sim
     data = results_manager.get_data(sim)
     dc = data['drug_curve']
     # data = data[:,0:-1]
@@ -143,91 +313,47 @@ def make_figure(roc_info_path,adh_info_path):
                                         legend_labels=True,
                                         linewidth=1.5,
                                         labelsize = labelsize,
-                                        label_lines = True,
-                                        select_labels = select_labels,
-                                        label_xpos=label_xpos,
+                                        # label_lines = True,
+                                        # select_labels = select_labels,
+                                        # label_xpos=label_xpos,
                                         label_kwargs=label_kwargs
                                         )
     drug_ax = ax[1,1]
-    drug_ax.plot(dc,color='black',linewidth=1)
+    mf = most_fit_at_conc(dc,roc_exp.populations[extinct_exp_num])
+    chunks = detect_changes(mf)
+    cc = p.gen_color_cycler()
+    cc_dict = cc.by_key()
+    colors = cc_dict['color']
+
+    drug_ax = plot_drug_curve(drug_ax,dc,mf,chunks,colors)
+
+
+
     #%% nonadherance data
-    
-    # suffix = '11042021_0000' # lab machine
-    # exp_num = 2 # lab machine
-    # # exp_num = 0 # macbook
-    # # suffix = '11082021_0000' # macbook
-    # data_folder = 'results_' + suffix
-    # exp_info_file = 'experiment_info_' + suffix + '.p'
-    
-    data_folder = adh_exp.results_path
-    exp_info_file = adh_exp.experiment_info_path
+
     
     exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
-    max_cells = exp_info.populations[0].max_cells
+
     n_sims = exp_info.n_sims
     
     pop = exp_info.populations[0]
     pop_adh = pop
     n_timestep = pop.n_timestep
-    
-    exp_num = 3
-    # exp = exp_folders[exp_num]
-    
-    sim_files = os.listdir(path=exp)
-    sim_files = sorted(sim_files)
-    
+
     # find one extinct and one survived simulation
     
-    k = 0
-    found_extinct = False
-    found_survived = False
-    
-    # while found_extinct == False or found_survived == False:
-    #     sim = sim_files[k]
-    #     sim = exp + os.sep + sim
-    #     data = results_manager.get_data(sim)
-    #     # data = data[:,0:-2]
-    #     data_t = data['counts']
-    #     data_t = data_t[-1,:]
-    #     if any(data_t >= 1):
-    #         num_survived = k
-    #         found_survived = True
-    #     else:
-    #         num_extinct = k
-    #         found_extinct = True
-    #     k+=1
+    survived_exp, survived_exp_num, num_survived = find_survived(exp_folders,n_sims)
 
-    k = 0
-    while (found_extinct == False or found_survived == False) and k < n_sims:
-        # while exp_num < len(exp_folders):
-        exp = exp_folders[exp_num]
-        sim_files = os.listdir(path=exp)
-        sim_files = sorted(sim_files)
+    extinct_exp, extinct_exp_num, num_extinct = find_extinct(exp_folders,n_sims)
 
-        sim = sim_files[k]
-        sim = exp + os.sep + sim
-        data = results_manager.get_data(sim)
-        # data = data[:,0:-1]
-        # data_t = data[-1,:]
-        data_t = data['counts']
-        data_t = data_t[-1,:]
-        if any(data_t >= 1):
-            num_survived = k
-            found_survived = True
-        else:
-            num_extinct = k
-            # exp_extinct = exp_num
-            found_extinct = True
-        k+=1
-    
-    if found_extinct == False or found_survived == False:
-        print(found_extinct)
-        print(found_survived)
-        raise ValueError('No suitable example traces found')
+
     #%% plot nonadherance survived timecourse
     
+    sim_files = os.listdir(path=survived_exp)
+    sim_files = sorted(sim_files)
     sim = sim_files[num_survived]
-    sim = exp + os.sep + sim
+    sim = survived_exp + os.sep + sim
+
     data = results_manager.get_data(sim)
     dc = data['drug_curve']
     survived_schedule = data['regimen']
@@ -242,7 +368,7 @@ def make_figure(roc_info_path,adh_info_path):
     tc = data['counts']
     tc = tc/np.max(tc)
     
-    select_labels = [0,2]
+    select_labels = [2,9]
     label_xpos = [150,550]
     
     tcax,drug_ax = p.plot_timecourse_to_axes(tc,
@@ -261,12 +387,22 @@ def make_figure(roc_info_path,adh_info_path):
                                             label_kwargs=label_kwargs
                                             )
     drug_ax = ax[1,2]
-    drug_ax.plot(dc,color='black',linewidth=1)
+
+    mf = most_fit_at_conc(dc,adh_exp.populations[survived_exp_num])
+    chunks = detect_changes(mf)
+    cc = p.gen_color_cycler()
+    cc_dict = cc.by_key()
+    colors = cc_dict['color']
+
+    drug_ax = plot_drug_curve(drug_ax,dc,mf,chunks,colors)
     
     #%% plot nonadherance extinct timecourse
     
+    sim_files = os.listdir(path=extinct_exp)
+    sim_files = sorted(sim_files)
     sim = sim_files[num_extinct]
-    sim = exp + os.sep + sim
+    sim = extinct_exp + os.sep + sim
+
     data = results_manager.get_data(sim)
     dc = data['drug_curve']
     extinct_schedule = data['regimen']
@@ -298,7 +434,13 @@ def make_figure(roc_info_path,adh_info_path):
                                                 label_lines=True
                                                 )
     drug_ax = ax[1,3]
-    drug_ax.plot(dc,color='black',linewidth=1)
+    mf = most_fit_at_conc(dc,adh_exp.populations[extinct_exp_num])
+    chunks = detect_changes(mf)
+    cc = p.gen_color_cycler()
+    cc_dict = cc.by_key()
+    colors = cc_dict['color']
+
+    drug_ax = plot_drug_curve(drug_ax,dc,mf,chunks,colors)
     #%%  plot dose times
     
     x = np.arange(n_timestep)
@@ -314,8 +456,8 @@ def make_figure(roc_info_path,adh_info_path):
         ax[0,col] = p.shrinky(ax[0,col],0.04)
         ax[1,col] = p.shrinky(ax[1,col],0.11)
         # ax[1,col] = p.shifty(ax[1,col],-0.04)
-        ax[1,col].ticklabel_format(style='scientific',axis='y',
-                                              scilimits=(0,3))
+        # ax[1,col].ticklabel_format(style='scientific',axis='y',
+        #                                       scilimits=(0,3))
         
         ax[2,col] = p.shrinky(ax[2,col],0.2)
         ax[1,col] = p.shifty(ax[1,col],-0.02)
@@ -346,9 +488,9 @@ def make_figure(roc_info_path,adh_info_path):
     #%% Adjust x axis tick labels
     
     # ax[0,0] = pop_roc.x_ticks_to_days(ax[0,0])
-    time_scale = 24/pop_roc.timestep_scale
-    ax[0,0].set_xticks([0,250*time_scale,500*time_scale])
-    ax[0,0].set_xticklabels([0,250,500])
+    # time_scale = 24/pop_roc.timestep_scale
+    # ax[0,0].set_xticks([0,250*time_scale,500*time_scale])
+    # ax[0,0].set_xticklabels([0,250,500])
 
     # xlim = [0,500*time_scale]
 
@@ -363,9 +505,9 @@ def make_figure(roc_info_path,adh_info_path):
     
     for col in range(0,2):
         ax[1,col] = pop_roc.x_ticks_to_days(ax[1,col])
-        ax[1,col].set_xticks(xt)
-        ax[1,col].set_xticklabels(xl)
-        ax[1,col].set_xlim(xlim)
+        # ax[1,col].set_xticks(xt)
+        # ax[1,col].set_xticklabels(xl)
+        # ax[1,col].set_xlim(xlim)
         ax[1,col].set_xlabel('Days')
     
 
@@ -385,8 +527,8 @@ def make_figure(roc_info_path,adh_info_path):
     ax[0,3].set_xticklabels(xl)
     ax[0,3].set_xlim(xlim)
 
-    ax[1,0].ticklabel_format(style='scientific',axis='y',scilimits=(0,1))
-    ax[1,2].ticklabel_format(style='scientific',axis='y',scilimits=(0,1))
+    # ax[1,0].ticklabel_format(style='scientific',axis='y',scilimits=(0,1))
+    # ax[1,2].ticklabel_format(style='scientific',axis='y',scilimits=(0,1))
     
     #%% Add axis labels
     
@@ -416,8 +558,8 @@ def make_figure(roc_info_path,adh_info_path):
     k+=1
     ax[2,3].annotate(alphabet[k],(0,1.4),xycoords='axes fraction')
 
-    ax[1,0].annotate('c',(0,1.47),xycoords='axes fraction')
-    ax[1,2].annotate('g',(0,1.47),xycoords='axes fraction')
+    ax[1,0].annotate('c',(0,1.1),xycoords='axes fraction')
+    ax[1,2].annotate('g',(0,1.1),xycoords='axes fraction')
     
     # fig.tight_layout()
 

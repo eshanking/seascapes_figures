@@ -98,7 +98,7 @@ def make_fig(exp=None,exp_info_path=None):
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
 
-    ax.set_ylabel('Ratio',fontsize=12)
+    ax.set_ylabel('Odds',fontsize=12)
     ax.set_xlabel('Scheduled dose',fontsize=12)
 
     ax.tick_params(axis='x', labelsize=12)
