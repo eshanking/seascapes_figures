@@ -182,7 +182,7 @@ class Plotter():
 
                     f = gl[str(g)]
                     f = [x*60**2 for x in f]
-                    ax.plot(xdata,f,label = str(pop.int_to_binary(g)),linewidth=linewidth) 
+                    ax.scatter(xdata,f,label = str(pop.int_to_binary(g)),linewidth=linewidth) 
 
             
             else:

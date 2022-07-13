@@ -151,7 +151,7 @@ def make_fig(roc_exp=None,exp_info_path=None):
 
     for a in ax:
         a.set_ylim([-10,110])
-        a.set_xlim([0,xmax])
+        # a.set_xlim([0,xmax])
         a = pop.x_ticks_to_days(a)
 
     results_manager.save_fig(fig,'roc_km_curve.pdf',bbox_inches='tight')
@@ -189,10 +189,10 @@ def make_fig(roc_exp=None,exp_info_path=None):
     p_values.to_csv(result_path)
 
     return fig, ax
-#%%
-if __name__ == '__main__':
+# #%%
+# if __name__ == '__main__':
 
-    eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06222022_0000/experiment_info_06222022_0000.p'
-    # eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06222022_0001/experiment_info_06222022_0001.p'
-    make_fig(exp_info_path=eip)
-#%%     
+#     eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06222022_0000/experiment_info_06222022_0000.p'
+#     # eip = '/Users/kinge2/Library/CloudStorage/Box-Box/seascapes_figures/results/results_06222022_0001/experiment_info_06222022_0001.p'
+#     make_fig(exp_info_path=eip)
+# #%%     

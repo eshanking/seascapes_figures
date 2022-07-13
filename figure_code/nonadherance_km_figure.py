@@ -120,7 +120,7 @@ def make_fig(adh_exp=None,exp_info_path=None):
         a = pop.x_ticks_to_days(a)
         a.set_xlabel('Days')
         
-    ax[2].legend(frameon=False,loc=[1.1,.3],title='$k_{abs}$',fontsize=8,ncol=1)
+    ax[2].legend(frameon=False,loc=[1.1,.3],title='$p_{forget}$',fontsize=8,ncol=1)
     
     pad = 0.05
     

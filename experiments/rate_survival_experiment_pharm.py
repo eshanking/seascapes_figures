@@ -8,7 +8,7 @@ def make_data():
     max_doses = [100]
     curve_types = ['pharm']
     experiment_type = 'rate-survival'
-    n_sims = 500
+    n_sims = 100
    #  n_sims = 1
     
     # slopes = np.array([0.4,0.5,0.6,0.7])*10**-3
@@ -22,7 +22,8 @@ def make_data():
     init_counts[0] = 10**10
     
     options = {'doubling_time':1,
-               'death_rate':0.0144,
+               # 'death_rate':0.0144,
+               'death_rate':0.028,
             #    'mut_rate':10**-9,
                'mut_rate':1.4*10**-8,
                # 'mut_rate':10**-3,
@@ -40,9 +41,9 @@ def make_data():
                'plot':False,
             #    'ic50_data':'pyrimethamine_ic50.csv',
                'fitness_data':'estimate',
-               'null_seascape':True,
+               'null_seascape':False,
                # 'null_seascape_dose':1
-               'null_seascape_method':'sort'
+               # 'null_seascape_method':'sort'
                }
     
     e = Experiment(max_doses=max_doses,

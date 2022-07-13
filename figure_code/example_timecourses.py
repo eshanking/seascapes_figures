@@ -16,7 +16,7 @@ def most_fit_at_conc(dc,pop):
     for c in range(len(dc)):
 
         conc = dc[c]
-        p_fit_list = p.gen_fit_land(conc)
+        p_fit_list = pop.gen_fit_land(conc)
         mf[c] = (np.argmax(p_fit_list))
     
     return mf
@@ -514,6 +514,7 @@ def make_figure(roc_info_path,adh_info_path):
     for col in range(2,4):
         for row in range(0,3):
             ax[row,col] = pop_adh.x_ticks_to_days(ax[row,col])
+            ax[row,col].set_xlabel('Days')
 
     xt = ax[1,2].get_xticks()
     xl = ax[1,2].get_xticklabels()
