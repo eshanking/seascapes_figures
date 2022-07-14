@@ -6,7 +6,7 @@ from seascapes_figures.utils import results_manager, plotter, dir_manager
 import pandas as pd
 import pickle
 
-def make_fig(roc_exp=None,exp_info_path=None):
+def make_fig(roc_exp=None,exp_info_path=None,save=True):
 
     if roc_exp is None:
         roc_exp = pickle.load(open(exp_info_path,'rb'))
@@ -154,41 +154,45 @@ def make_fig(roc_exp=None,exp_info_path=None):
         # a.set_xlim([0,xmax])
         a = pop.x_ticks_to_days(a)
 
-    results_manager.save_fig(fig,'roc_km_curve.pdf',bbox_inches='tight')
+    if save:
+        results_manager.save_fig(fig,'roc_km_curve.pdf',bbox_inches='tight')
     #%%
     # perform pairwise log-rank tests and compute p values
-    analysis_keys = list(km_data.keys()) # endpoints being analyzed
-    experiment_keys = [str(p) for p in k_abs] # experiments performed
+
+    if save:
+        analysis_keys = list(km_data.keys()) # endpoints being analyzed
+        experiment_keys = [str(p) for p in k_abs] # experiments performed
+        
+        comparisons = [] # vector of all pairwise comparisons without duplicates
+        
+        for i in range(len(experiment_keys)):
+            j = i+1
+            while j < len(experiment_keys):
+                pair = (k_abs[i],k_abs[j])
+                j+=1
+                comparisons.append(pair)
+        
+        p_values = {'survival':{},
+                    'resistance 0111':{},
+                    'resistance 1111':{}}
+        
+        n_tests = len(k_abs)-1
+        
+        for ak in  analysis_keys:
+            for pair in comparisons:
+                key0 = str(pair[0])
+                key1 = str(pair[1])
+                sr = exp_info.log_rank_test(km_data[ak][key0],km_data[ak][key1])
+                p_values[ak][str(pair)] = float(sr.p_value)*n_tests # Mutliple hypothesis testing correction
+        
+        p_values = pd.DataFrame(p_values)
+        result_path = dir_manager.make_resultspath_absolute(
+            'rate_of_change_km_curves_p_values.csv')
     
-    comparisons = [] # vector of all pairwise comparisons without duplicates
-    
-    for i in range(len(experiment_keys)):
-        j = i+1
-        while j < len(experiment_keys):
-            pair = (k_abs[i],k_abs[j])
-            j+=1
-            comparisons.append(pair)
-    
-    p_values = {'survival':{},
-                'resistance 0111':{},
-                'resistance 1111':{}}
-    
-    n_tests = len(k_abs)-1
-    
-    for ak in  analysis_keys:
-        for pair in comparisons:
-            key0 = str(pair[0])
-            key1 = str(pair[1])
-            sr = exp_info.log_rank_test(km_data[ak][key0],km_data[ak][key1])
-            p_values[ak][str(pair)] = float(sr.p_value)*n_tests # Mutliple hypothesis testing correction
-    
-    p_values = pd.DataFrame(p_values)
-    result_path = dir_manager.make_resultspath_absolute(
-        'rate_of_change_km_curves_p_values.csv')
     
     p_values.to_csv(result_path)
 
-    return fig, ax
+    return km_data
 # #%%
 # if __name__ == '__main__':
 
