@@ -1,9 +1,18 @@
 from scipy.stats.qmc import LatinHypercube
 import numpy as np
+import time
+import matplotlib.pyplot as plt
 from seascapes_figures.experiments.rate_survival_experiment_pharm import make_data
 from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
 
-num_samples = 2
+num_samples = 200
+num_dimensions = 2
+n_sims = 10
+
+per_sim_runtime = 14 # seconds
+runtime_estimate = per_sim_runtime*num_samples*n_sims
+
+print('Runtime estimate = ' + str(runtime_estimate))
 
 def scale_to_range(x,range):
     width = max(range)-min(range)
@@ -18,14 +27,36 @@ def scale_to_range(x,range):
 def get_outcome(e):
 
     result = make_fig(e)
+    result = calculate_result_range(result,e)
 
     return result
 
-sampler = LatinHypercube(d=2)
+def calculate_result_range(result,e):
+
+    n_timestep = e.populations[0].n_timestep
+
+    result = result['survival']
+    
+    num_conditions = len(result.keys())
+    proportion_extinct = np.zeros(num_conditions)
+
+    k = 0
+    for key in result.keys():
+        survival_times = result[key]
+        num_extinct = len(np.argwhere(survival_times<n_timestep))
+        proportion_extinct[k] = num_extinct/e.n_sims
+    
+    result_range = max(proportion_extinct) - min(proportion_extinct)
+
+    return result_range
+
+sampler = LatinHypercube(d=num_dimensions)
 sample = sampler.random(n=num_samples)
 
-min_death_rate = 1/(12*24)
-max_death_rate = 1/(2*24)
+# min_death_rate = 1/(12*24)
+min_death_rate = 0.001
+max_death_rate = 0.1
+# max_death_rate = 1/(2*24)
 
 death_rate_range = (min_death_rate,max_death_rate)
 
@@ -40,15 +71,38 @@ mut_rate_sample = scale_to_range(sample[:,1],mut_rate_range)
 sample = np.array([death_rate_sample,mut_rate_sample])
 sample = np.transpose(sample)
 
-results = np.zeros(num_samples)
+results = []
 
 k = 0
+
+tic = time.time()
+
 for s in sample:
     death_rate = s[0]
     mut_rate = s[1]
 
-    e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=100)
+    e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=n_sims,debug=False)
     result = get_outcome(e)
-    results[k] = result
+
+    results.append(result)
+
     k+=1
-    
+
+toc = time.time()
+elapsed = toc-tic
+print(elapsed)
+
+fig,ax = plt.subplots()
+
+im = ax.scatter(sample[:,0],sample[:,1],c=results)
+
+ax.scatter(0.014,1.4*10**-8,c='black',marker='x')
+
+fig.colorbar(im,ax=ax,label='Range')
+
+ax.set_ylabel('Mutation rate')
+ax.set_xlabel('Death rate')
+
+ax.set_xticks([0.005,0.01,0.015,0.02])
+
+plt.savefig('lhs_mutrate_vs_deathrate.pdf')

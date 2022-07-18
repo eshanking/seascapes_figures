@@ -1,7 +1,7 @@
 from seascapes_figures.classes.experiment_class import Experiment
 import numpy as np
     
-def make_data(death_rate=None,mut_rate=None,n_sims=None):
+def make_data(death_rate=None,mut_rate=None,n_sims=None,debug=False):
    np.random.seed(2021)
 
    #  max_doses = [100]
@@ -62,7 +62,7 @@ def make_data(death_rate=None,mut_rate=None,n_sims=None):
                   passage = False,
                   passage_time = 96,
                   population_options=options,
-                  debug=False)
+                  debug=debug)
 
 
    e.run_experiment()
