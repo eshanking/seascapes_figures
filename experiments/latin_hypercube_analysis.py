@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from seascapes_figures.experiments.rate_survival_experiment_pharm import make_data
 from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
 
-num_samples = 200
+num_samples = 100
 num_dimensions = 2
 n_sims = 10
 
@@ -36,7 +36,7 @@ def calculate_result_range(result,e):
     n_timestep = e.populations[0].n_timestep
 
     result = result['survival']
-    
+    # 
     num_conditions = len(result.keys())
     proportion_extinct = np.zeros(num_conditions)
 
@@ -50,7 +50,7 @@ def calculate_result_range(result,e):
 
     return result_range
 
-sampler = LatinHypercube(d=num_dimensions)
+sampler = LatinHypercube(d=num_dimensions,centered=True)
 sample = sampler.random(n=num_samples)
 
 # min_death_rate = 1/(12*24)
@@ -103,6 +103,6 @@ fig.colorbar(im,ax=ax,label='Range')
 ax.set_ylabel('Mutation rate')
 ax.set_xlabel('Death rate')
 
-ax.set_xticks([0.005,0.01,0.015,0.02])
+# ax.set_xticks([0.005,0.01,0.015,0.02])
 
-plt.savefig('lhs_mutrate_vs_deathrate.pdf')
+fig.savefig('lhs_mutrate_vs_deathrate.pdf')
