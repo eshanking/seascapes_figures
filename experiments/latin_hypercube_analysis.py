@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from seascapes_figures.experiments.rate_survival_experiment_pharm import make_data
 from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
 
-num_samples = 100
+num_samples = 10
 num_dimensions = 2
 n_sims = 10
 
