@@ -50,7 +50,7 @@ def calculate_result_range(result,e):
 
     return result_range
 
-sampler = LatinHypercube(d=num_dimensions,centered=True)
+sampler = LatinHypercube(d=num_dimensions)
 sample = sampler.random(n=num_samples)
 
 # min_death_rate = 1/(12*24)
