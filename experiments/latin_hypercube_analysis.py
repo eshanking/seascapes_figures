@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from seascapes_figures.experiments.rate_survival_experiment_pharm import make_data
 from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
 
-num_samples = 10
-num_dimensions = 2
+num_samples = 2
+num_dimensions = 3 # death rate, mutation rate, and carrying capacity
 n_sims = 10
 
 per_sim_runtime = 14 # seconds
@@ -70,7 +70,15 @@ max_mut_rate = 10**-7
 mut_rate_range = (min_mut_rate,max_mut_rate)
 mut_rate_sample = scale_to_range(sample[:,1],mut_rate_range)
 
-sample = np.array([death_rate_sample,mut_rate_sample])
+min_carrying_cap = 10**8
+max_carrying_cap = 10**11
+
+carrying_cap_range = (min_carrying_cap,max_carrying_cap)
+carrying_cap_sample = scale_to_range(sample[:,2],carrying_cap_range)
+
+carrying_cap_sample = [int(s) for s in carrying_cap_sample]
+
+sample = np.array([death_rate_sample,mut_rate_sample,carrying_cap_sample])
 sample = np.transpose(sample)
 
 results = []
@@ -82,8 +90,9 @@ tic = time.time()
 for s in sample:
     death_rate = s[0]
     mut_rate = s[1]
+    cc = s[2]
 
-    e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=n_sims,debug=False)
+    e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=n_sims,carrying_cap=cc,debug=False)
     result = get_outcome(e)
 
     results.append(result)
@@ -96,6 +105,7 @@ print(elapsed)
 
 fig,ax = plt.subplots()
 
+# mut rate v death rate
 im = ax.scatter(sample[:,0],sample[:,1],c=results)
 
 ax.scatter(0.014,1.4*10**-8,c='black',marker='x')
@@ -108,3 +118,33 @@ ax.set_xlabel('Death rate')
 # ax.set_xticks([0.005,0.01,0.015,0.02])
 
 fig.savefig('lhs_mutrate_vs_deathrate.pdf')
+
+# death rate v carrying cap
+fig,ax = plt.subplots()
+im = ax.scatter(sample[:,0],sample[:,2],c=results)
+
+ax.scatter(0.014,10**11,c='black',marker='x')
+
+fig.colorbar(im,ax=ax,label='Range')
+
+ax.set_ylabel('Carrying capacity')
+ax.set_xlabel('Death rate')
+
+# ax.set_xticks([0.005,0.01,0.015,0.02])
+
+fig.savefig('lhs_carrying_cap_vs_death_rate.pdf')
+
+# mut rate v carrying cap
+fig,ax = plt.subplots()
+im = ax.scatter(sample[:,1],sample[:,2],c=results)
+
+ax.scatter(1.4*10**-8,10**11,c='black',marker='x')
+
+fig.colorbar(im,ax=ax,label='Range')
+
+ax.set_ylabel('Carrying capacity')
+ax.set_xlabel('Mutation rate')
+
+# ax.set_xticks([0.005,0.01,0.015,0.02])
+
+fig.savefig('lhs_mutrate_vs_carrying_cap.pdf')
