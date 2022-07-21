@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/home/esk81')
 from scipy.stats.qmc import LatinHypercube
 import numpy as np
 import time
