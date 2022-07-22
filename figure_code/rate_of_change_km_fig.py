@@ -38,9 +38,6 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True):
         k_abs_t = float(k_abs_t)
         
         # print(f"{k_abs_t:.2e}")
-
-        num = np.argwhere(k_abs == k_abs_t)
-        num = num[0,0]
         
         sim_files = os.listdir(path=exp)
         sim_files = sorted(sim_files)

@@ -1,7 +1,15 @@
 from seascapes_figures.classes.experiment_class import Experiment
 import numpy as np
     
-def make_data(death_rate=None,mut_rate=None,n_sims=None,carrying_cap=None,debug=False):
+def make_data(death_rate=None,
+              mut_rate=None,
+              n_sims=None,
+              carrying_cap=None,
+              debug=False,
+              population_template=None,
+              slopes=None):
+
+
    np.random.seed(2021)
 
    #  max_doses = [100]
@@ -25,10 +33,8 @@ def make_data(death_rate=None,mut_rate=None,n_sims=None,carrying_cap=None,debug=
       mut_rate = 1.4*10**-8
    if carrying_cap is None:
       carrying_cap = 10**11
-   else:
-      carrying_cap = carrying_cap
-
-   slopes = np.array([2,2.5,3,3.5])*10**-4
+   if slopes is None:
+      slopes = np.array([2,2.5,3,3.5])*10**-4
 
    init_counts = np.zeros(16)
    init_counts[0] = 10**10
@@ -58,6 +64,7 @@ def make_data(death_rate=None,mut_rate=None,n_sims=None,carrying_cap=None,debug=
             # 'null_seascape_method':'sort'
             }
 
+
    e = Experiment(max_doses=max_doses,
                   slopes=slopes,
                   curve_types = curve_types,
@@ -66,6 +73,7 @@ def make_data(death_rate=None,mut_rate=None,n_sims=None,carrying_cap=None,debug=
                   passage = False,
                   passage_time = 96,
                   population_options=options,
+                  population_template=population_template,
                   debug=debug)
 
 

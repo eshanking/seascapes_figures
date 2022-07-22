@@ -7,46 +7,58 @@ import matplotlib.pyplot as plt
 from seascapes_figures.experiments.rate_survival_experiment_pharm import make_data
 from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
 
-num_samples = 2
+np.random.seed(2022)
+num_samples = 100
 num_dimensions = 3 # death rate, mutation rate, and carrying capacity
 n_sims = 10
 
-per_sim_runtime = 14 # seconds
+slopes = [2*10**-4,3.5*10**-4]
+
+per_sim_runtime = 4 # seconds
 runtime_estimate = per_sim_runtime*num_samples*n_sims
 
 print('Runtime estimate = ' + str(runtime_estimate))
 
-def scale_to_range(x,range):
-    width = max(range)-min(range)
-    data_width = max(x) - min(x)
+def scale_to_range(data,range):
 
-    x_scale = x/data_width
-    x_scale = x_scale*width
-    x_scale = x_scale + min(range)
+    scale_width = max(range)-min(range)
+    data = np.array(data)
+    # normalize data to between 0 and 1
 
-    return x_scale
+    data_width = max(data) - min(data)
+
+    data = data - min(data)
+
+    data = data/data_width
+
+    # scale normalized data to range
+    data = data*scale_width
+    data = data+min(range)
+
+    return data
 
 def get_outcome(e):
 
-    result = make_fig(e)
-    result = calculate_result_range(result,e)
+    km_data = make_fig(e)
+    result = calculate_result_range(km_data,e)
 
     return result
 
-def calculate_result_range(result,e):
+def calculate_result_range(km_data,e):
 
     n_timestep = e.populations[0].n_timestep
 
-    result = result['survival']
+    survival_km = km_data['survival']
     # 
-    num_conditions = len(result.keys())
+    num_conditions = len(survival_km.keys())
     proportion_extinct = np.zeros(num_conditions)
 
     k = 0
-    for key in result.keys():
-        survival_times = result[key]
+    for key in survival_km.keys():
+        survival_times = survival_km[key]
         num_extinct = len(np.argwhere(survival_times<n_timestep))
         proportion_extinct[k] = num_extinct/e.n_sims
+        k+=1
     
     result_range = max(proportion_extinct) - min(proportion_extinct)
 
@@ -87,21 +99,41 @@ k = 0
 
 tic = time.time()
 
-for s in sample:
+# get a template population object by doing the experiment once
+s =  sample[0]
+death_rate = s[0]
+mut_rate = s[1]
+cc = s[2]
+
+e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=n_sims,carrying_cap=cc,debug=False,slopes=slopes)
+
+result = get_outcome(e)
+results.append(result)
+
+p = e.populations[0]
+
+for s in sample[1:]:
     death_rate = s[0]
     mut_rate = s[1]
     cc = s[2]
 
-    e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=n_sims,carrying_cap=cc,debug=False)
+    p.reset_drug_conc_curve(mut_rate=mut_rate,death_rate=death_rate,max_cells=cc)
+
+    e = make_data(death_rate=death_rate,mut_rate=mut_rate,n_sims=n_sims,carrying_cap=cc,debug=False,
+                  population_template=p,slopes=slopes)
+
     result = get_outcome(e)
 
     results.append(result)
 
-    k+=1
 
 toc = time.time()
 elapsed = toc-tic
-print(elapsed)
+print(round(elapsed))
+
+avg_runtime_per_sim = elapsed/(n_sims*num_samples)
+
+print('Runtime per sim: ' + str(round(avg_runtime_per_sim)))
 
 fig,ax = plt.subplots()
 

@@ -7,11 +7,13 @@ import os
 import time
 import pickle
 import lifelines
+import copy
 
 class Experiment():
 
     # Initializer
     def __init__(self,
+                slopes=None,
                  n_sims = 1,
                  curve_types = None,
                  max_doses = None,
@@ -28,10 +30,10 @@ class Experiment():
                  prob_drops = None,
                  n_impulse=1,
                  population_options = {},
-                 slopes=None,
                  passage=False,
                  passage_time = 48,
-                 debug = True): # debug = True -> no save
+                 debug = True,
+                 population_template=None): # debug = True -> no save
     
         self.root_path = str(dir_manager.get_project_root())
         
@@ -213,35 +215,30 @@ class Experiment():
             
         elif self.experiment_type == 'rate-survival':
             # if the curve type is 'pharm' then slope will be interpreted as k_abs
+
+            # initialize one population object
             self.slopes = slopes
+            
+            if population_template is None:
+                p0 = Population(max_dose=self.max_doses[0],
+                                k_abs=self.slopes[0],
+                                curve_type='pharm',
+                                n_sims=1,
+                                passage=passage,
+                                passage_time=passage_time,
+                                **self.population_options)
+            else:
+                p0 = population_template
+
             for slope in self.slopes:
-                if curve_types[0] == 'pharm':
+                # if curve_types[0] == 'pharm':
                     # print(population_options)
-                    self.populations.append(Population(max_dose=self.max_doses[0],
-                                                        k_abs=slope,
-                                                        curve_type='pharm',
-                                                        n_sims=1,
-                                                        passage=passage,
-                                                        passage_time=passage_time,
-                                                        **self.population_options))
-                elif curve_types[0] == 'pulsed':
-                    # print(population_options)
-                    self.populations.append(Population(max_dose=self.max_doses[0],
-                                                        k_abs=slope,
-                                                        curve_type='pulsed',
-                                                        n_sims=1,
-                                                        passage=passage,
-                                                        passage_time=passage_time,
-                                                        **self.population_options))
-                else:
-                    self.populations.append(Population(max_dose=self.max_doses[0],
-                                                        slope=slope,
-                                                        curve_type='linear',
-                                                        n_sims=1,
-                                                        passage=passage,
-                                                        passage_time=passage_time,
-                                                        **self.population_options))                        
-                    
+
+                p = copy.copy(p0)
+                p.reset_drug_conc_curve(k_abs=slope)
+
+                self.populations.append(p)     
+                
             # self.rate_survival_results = pd.DataFrame(columns=[])
             
         # generate new save folder

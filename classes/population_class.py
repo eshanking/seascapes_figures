@@ -630,16 +630,16 @@ class Population(fitness.Fitness,plotter.Plotter):
         dc = self.gen_curves()
         self.drug_curve = dc[0]
 ##############################################################################
-# Wrapper methods for plotting
-  
-    # def plot_timecourse(self,counts_t=None,title_t=None):
-    #     fig = plotter.plot_timecourse(self,counts_t=counts_t,title_t=title_t)
-    #     return fig
-    
-    # def plot_fitness_curves(self,fig_title='',plot_r0 = False,save=False,
-    #                         savename=None,**kwargs):
-    #     fig,ax = plotter.plot_fitness_curves(self,fig_title=fig_title,
-    #                                       plot_r0 = plot_r0,save=save,
-    #                                       savename=savename,**kwargs)
-    #     return fig,ax
-    
+
+    def reset_drug_conc_curve(self,**kwargs):
+        """Resets the drug concentration curve. Also updates any paramters passed into kwargs.
+           Useful when performing experiments with a large number of population objects. Eliminates the need to repeatedly
+           estimate fitness seascapes.
+        """
+        for paramkey in self.__dict__.keys():
+            for optkey in kwargs.keys():
+                if paramkey == optkey:
+                    td = {paramkey:kwargs.get(paramkey)}
+                    self.__dict__.update(td)
+        
+        self.set_drug_curve()
