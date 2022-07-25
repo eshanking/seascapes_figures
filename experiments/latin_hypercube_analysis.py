@@ -1,11 +1,14 @@
 import sys
 sys.path.append('/home/esk81')
 from scipy.stats.qmc import LatinHypercube
+import scipy.interpolate
 import numpy as np
 import time
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from seascapes_figures.experiments.rate_survival_experiment_pharm import make_data
 from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
+# from seascapes_figures.utils import plotter
 
 np.random.seed(2022)
 num_samples = 100
@@ -64,8 +67,38 @@ def calculate_result_range(km_data,e):
 
     return result_range
 
+def interpolate(x,y,grid=None,n=None,**kwargs):
+    """Using scipy interpolate griddata, interpolates x,y over grid values.
+    D dimensional data
+
+    Args:
+        x (length D tuple of 1-D ndarrays): data points
+        y (ndarray): values associated with x data points
+        grid (length D tuple of ndarrays): mesh grid to interpolate over
+    """
+
+    # if type(grid) is list:
+    #     grid = tuple(grid)
+
+    if grid is None:
+        grid = []
+        if n is None:
+            n = 100
+        for x_t in x:
+            vect = np.linspace(min(x_t),max(x_t),num=n)
+            grid.append(vect)
+    
+    grid = tuple(grid)
+    grid = np.meshgrid(*grid)
+    grid = tuple(grid)
+
+    values = scipy.interpolate.griddata(x,y,grid,**kwargs)
+
+    return values
+
 sampler = LatinHypercube(d=num_dimensions)
 sample = sampler.random(n=num_samples)
+sample_raw = sample
 
 # min_death_rate = 1/(12*24)
 min_death_rate = 0.001
@@ -135,48 +168,81 @@ avg_runtime_per_sim = elapsed/(n_sims*num_samples)
 
 print('Runtime per sim: ' + str(round(avg_runtime_per_sim)))
 
-fig,ax = plt.subplots()
 
-# mut rate v death rate
-im = ax.scatter(sample[:,0],sample[:,1],c=results)
+###############################################################
+# Plotting
 
-ax.scatter(0.014,1.4*10**-8,c='black',marker='x')
+# Interpolate results in 3D
 
-fig.colorbar(im,ax=ax,label='Range')
+x = tuple([sample_raw[:,0],sample_raw[:,1],sample_raw[:,2]])
+v = interpolate(x,results)
 
-ax.set_ylabel('Mutation rate')
-ax.set_xlabel('Death rate')
+extent = np.min(x), np.max(x), np.min(y), np.max(y)
 
-# ax.set_xticks([0.005,0.01,0.015,0.02])
+# death rate vs mutation rate
 
-fig.savefig('lhs_mutrate_vs_deathrate.pdf')
+# sample = np.array([death_rate_sample,mut_rate_sample,carrying_cap_sample])
 
-# death rate v carrying cap
-fig,ax = plt.subplots()
-im = ax.scatter(sample[:,0],sample[:,2],c=results)
+fig,ax = plt.subplots(nrows=1,ncols=3,constrained_layout=False,figsize=(10,15))
+extent = np.min(x[0]), np.max(x[0]), np.min(x[1]), np.max(x[1])
 
-ax.scatter(0.014,10**11,c='black',marker='x')
+ax[0].imshow(np.nanmean(v,axis=2),extent=extent,origin='lower')
+# ax[0].title('Death rate vs mutation rate')
+ax[0].set_xlabel('Death rate')
+ax[0].set_ylabel('Mutation rate')
 
-fig.colorbar(im,ax=ax,label='Range')
+xt = ax[0].get_xticks()
+xtl = scale_to_range(xt,death_rate_range)
+ax[0].set_xticklabels(np.round(xtl,3))
 
-ax.set_ylabel('Carrying capacity')
-ax.set_xlabel('Death rate')
+yt = ax[0].get_yticks()
+ytl = scale_to_range(yt,mut_rate_range)
+ytl = [np.format_float_scientific(l,precision=1) for l in ytl]
+ax[0].set_yticklabels(ytl)
 
-# ax.set_xticks([0.005,0.01,0.015,0.02])
+# mutation rate vs carrying capacity
 
-fig.savefig('lhs_carrying_cap_vs_death_rate.pdf')
+extent = np.min(x[1]), np.max(x[1]), np.min(x[2]), np.max(x[2])
 
-# mut rate v carrying cap
-fig,ax = plt.subplots()
-im = ax.scatter(sample[:,1],sample[:,2],c=results)
+im = ax[1].imshow(np.nanmean(v,axis=0),extent=extent,origin='lower')
+# ax[1].title('Mutation rate vs carrying capacity')
+ax[1].set_xlabel('Mutation rate',labelpad=0.35)
+ax[1].set_ylabel('Carrying capacity')
 
-ax.scatter(1.4*10**-8,10**11,c='black',marker='x')
+ax[1].set_xticklabels(ytl,rotation=45)
 
-fig.colorbar(im,ax=ax,label='Range')
+yt = ax[1].get_yticks()
+ytl = scale_to_range(yt,carrying_cap_range)
+ytl = [np.format_float_scientific(l,precision=1) for l in ytl]
+ax[1].set_yticklabels(ytl)
 
-ax.set_ylabel('Carrying capacity')
-ax.set_xlabel('Mutation rate')
+carrying_cap_labels = ytl
 
-# ax.set_xticks([0.005,0.01,0.015,0.02])
+# death rate vs carrying capacity
 
-fig.savefig('lhs_mutrate_vs_carrying_cap.pdf')
+extent = np.min(x[0]), np.max(x[0]), np.min(x[2]), np.max(x[2])
+
+ax[2].imshow(np.nanmean(v,axis=1),extent=extent,origin='lower')
+# ax[1].title('Death rate vs carrying capacity')
+ax[2].set_xlabel('Death rate')
+ax[2].set_ylabel('Carrying capacity')
+
+ax[2].set_yticklabels(carrying_cap_labels)
+
+xt = ax[2].get_xticks()
+xtl = scale_to_range(xt,death_rate_range)
+ax[2].set_xticklabels(np.round(xtl,3))
+
+# fig.colorbar(im,ax=ax[2],label='Range')
+ax[1] = p.shiftx(ax[1],.1)
+ax[2] = p.shiftx(ax[2],0.2)
+
+axins = inset_axes(ax[1],
+                    width="100%",  
+                    height="5%",
+                    loc='lower center',
+                    borderpad=-7
+                   )
+fig.colorbar(im, cax=axins, orientation="horizontal",label='Survival probability range')
+
+fig.savefig('lhs_analysis.pdf')

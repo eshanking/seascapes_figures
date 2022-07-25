@@ -1,27 +1,7 @@
 import numpy as np
-import scipy
+import scipy.interpolate
 
-def make_mesh(n,data_range):
-    """Returns a mesh of arbitrary dimensions based on data_range
-
-    Args:
-        n (integer): number of points per dimensions
-        data_range (list): list of tuples. Length of list is the number of dimensions.
-        Each tuple in the list defines the range of each dimension.
-    """
-    
-    vectors = []
-    for range in data_range:
-        v = np.linspace(range[0],range[1],num=n)
-        vectors.append(v)
-
-    vectors = tuple(vectors)
-
-    grid = np.meshgrid(*vectors)
-
-    return grid
-
-def interpolate(x,y,grid=None,n=None):
+def interpolate(x,y,grid=None,n=None,**kwargs):
     """Using scipy interpolate griddata, interpolates x,y over grid values.
     D dimensional data
 
@@ -40,7 +20,12 @@ def interpolate(x,y,grid=None,n=None):
             n = 100
         for x_t in x:
             vect = np.linspace(min(x_t),max(x_t),num=n)
+            grid.append(vect)
     
-    values = scipy.interpolate.griddata(x,y,grid)
+    grid = tuple(grid)
+    grid = np.meshgrid(*grid)
+    grid = tuple(grid)
+
+    values = scipy.interpolate.griddata(x,y,grid,**kwargs)
 
     return values
