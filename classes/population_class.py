@@ -3,9 +3,10 @@ sys.path.append('/Users/kinge2/repos/')
 import numpy as np
 import math
 import random
-from fears.utils import plotter, pharm, fitness, dir_manager
+from seascapes_figures.utils import plotter, pharm, fitness, dir_manager
+import pandas as pd
 
-class Population:
+class Population(fitness.Fitness,plotter.Plotter):
     
     """Population class: the fundamental object of FEArS.
     
@@ -31,7 +32,7 @@ class Population:
                 k_abs: absorption coefficient
                 k_elim: eliminiation coefficient
             pulsed: simulates a patient taking a drug dose at intervals given 
-                by dose_schedule
+                by dose_schedule∏
             on_off: switches between 'on' (max_dose) and 'off' (min_dose) at
                 intervals given by dose_schedule. On/off ratio set by 
                 duty_cycle
@@ -129,7 +130,9 @@ class Population:
                  stop_condition = False,
                  timestep_scale = 1,
                  x_lim = None, # plotting
-                 y_lim = None # plotting
+                 y_lim = None, # plotting
+                 null_seascape_method = 'curve_fit',
+                 **kwargs
                  ):
         """
         """        
@@ -173,6 +176,7 @@ class Population:
         # Generate fitness data from IC50 and drugless growth rate data
         if fitness_data == 'generate':
             # Data paths
+            self.drug_units = '$\u03BC$M'
             if drugless_data is None:
                 self.drugless_data = dir_manager.make_datapath_absolute('ogbunugafor_drugless.csv')
             else:
@@ -202,9 +206,52 @@ class Population:
             self.n_genotype = self.landscape_data.shape[0]
         
         elif fitness_data == 'random':
+            self.drug_units = '$\u03BC$M'
+
             self.drugless_rates,self.ic50, = \
-                fitness.gen_random_seascape(n_allele)
+                self.gen_random_seascape(n_allele)
             self.n_genotype = 2**n_allele
+
+        elif fitness_data == 'estimate':
+            
+            self.drug_units = '$\u03BC$g/mL'
+
+            self.plate_paths = []
+
+            if 'plate_paths' in kwargs:
+                self.plate_paths = kwargs['plate_paths']
+            else:
+                self.plate_paths = ['20210929_plate1.csv','20210929_plate2.csv','20210929_plate3.csv']
+            self.plate_paths = [dir_manager.make_datapath_absolute(p) for p in self.plate_paths]
+            
+            self.growth_rate_data = []
+            for plate_path in self.plate_paths:
+                self.growth_rate_data.append(self.get_growth_rate_data(plate_path))
+            
+            if 'seascape_drug_conc' in kwargs:
+                self.seascape_drug_conc = kwargs['seascape_drug_conc']
+            else:
+                self.seascape_drug_conc = [0,0.003,0.0179,0.1072,0.643,3.858,23.1481,138.8889,833.3333,5000] #ug/mL
+
+            min_dc = np.log10(self.seascape_drug_conc[1])
+            max_dc = np.log10(max(self.seascape_drug_conc))
+            self.drug_conc_range = [np.round(min_dc),np.round(max_dc)]
+
+            self.max_od = self.get_max_od(self)
+            self.growth_rate_library = self.gen_growth_rate_library(self)
+            self.n_genotype = len(self.growth_rate_library.keys()) - 1
+
+            self.seascape_library = self.gen_seascape_library(self)
+
+            self.ic50 = np.zeros(self.n_genotype)
+            self.drugless_rates = np.zeros(self.n_genotype)
+
+            i = 0
+            for key in self.seascape_library.keys():
+                self.ic50[i] = self.seascape_library[key]['ic50']
+                self.drugless_rates[i] = self.seascape_library[key]['g_drugless']
+                i+=1
+
             
         # Initial number of cells (default = 10,000 at 0000)
         if init_counts is None:
@@ -267,10 +314,13 @@ class Population:
            self.x_lim = x_lim 
         self.y_lim = y_lim
         self.entropy_lim = entropy_lim
-        
+
+        self.null_seascape = null_seascape    
         if null_seascape:
+    
             self.null_seascape_dose=null_seascape_dose
-            self.set_null_seascape(self.null_seascape_dose)
+            self.null_seascape_method = null_seascape_method
+            self.set_null_seascape(self.null_seascape_dose,method=null_seascape_method)
         
         if passage:
             if not np.mod(passage_time,timestep_scale) == 0:
@@ -392,6 +442,18 @@ class Population:
         fit_land = self.__gen_fl_for_abm(conc, counts)
         
         fit_land = fit_land*self.timestep_scale
+
+        # most_fit = np.argwhere(fit_land == max(fit_land))
+        # most_fit = most_fit[0][0]
+        # print(self.int_to_binary(most_fit))
+        # print(max(fit_land))
+        # print(conc)
+        # print(sum(counts))
+
+        # if np.mod(mm,100) == 0:
+        #     input("Press Enter to continue...")
+
+
         death_rate = self.death_rate*self.timestep_scale
         mut_rate = self.mut_rate*self.timestep_scale
             
@@ -431,7 +493,7 @@ class Population:
             mutations = np.random.choice(n_genotype, size=n_mut, p=P[:,genotype]).astype(np.uint8)
 
             # Add mutating cell to their final types
-            counts_t += np.bincount( mutations , minlength=n_genotype)
+            counts_t += np.bincount( mutations , minlength=n_genotype )
 
         counts_t += daughter_counts
 
@@ -509,32 +571,33 @@ class Population:
 ##############################################################################
 # Wrapper methods for fitness
 
-    def gen_fitness(self,allele,conc,drugless_rate,ic50):
-        fit = fitness.gen_fitness(self,allele,conc,drugless_rate,ic50)
-        return fit
+    # def gen_fitness(self,allele,conc,drugless_rate,ic50):
+    #     fit = fitness.gen_fitness(self,allele,conc,drugless_rate,ic50)
+    #     return fit
     
-    def gen_fit_land(self,conc):
-        fit_land = fitness.gen_fit_land(self,conc)
-        return fit_land
+    # def gen_fit_land(self,conc):
+    #     fit_land = fitness.gen_fit_land(self,conc)
+    #     return fit_land
     
     # Private to avoid confusion with gen_fit_land
     def __gen_fl_for_abm(self,conc,counts):
-        fit_land = fitness.gen_fl_for_abm(self,conc,counts)
+        fit_land = self.gen_fl_for_abm(conc,counts)
         return fit_land
     
-    def randomize_seascape(self,
-                           drugless_limits=[1,1.5],
-                           ic50_limits=[-6.5,-1.5]):
-        fitness.randomize_seascape(self,
-                                   drugless_limits=drugless_limits,
-                                   ic50_limits=ic50_limits)
+    # def randomize_seascape(self,
+    #                        drugless_limits=[1,1.5],
+    #                        ic50_limits=[-6.5,-1.5]):
+    #     fitness.randomize_seascape(self,
+    #                                drugless_limits=drugless_limits,
+    #                                ic50_limits=ic50_limits)
         
-    def gen_null_seascape(self,conc):
-        drugless_rates_new,ic50_new = fitness.gen_null_seascape(self,conc)
-        return drugless_rates_new,ic50_new
+    # def gen_null_seascape(self,conc):
+    #     drugless_rates_new,ic50_new = fitness.gen_null_seascape(self,conc)
+    #     return drugless_rates_new,ic50_new
     
-    def set_null_seascape(self,conc):
-        self.drugless_rates,self.ic50 = self.gen_null_seascape(conc)
+    def set_null_seascape(self,conc,method='curve_fit'):
+
+        self.drugless_rates,self.ic50 = self.gen_null_seascape(conc,method=method)
     
 ###############################################################################
 # Wrapper methods for generating drug concentration curves
@@ -562,17 +625,21 @@ class Population:
     def gen_passage_drug_protocol(self):
         drug_curve = pharm.gen_passage_drug_protocol(self)
         return drug_curve
+
+    def set_drug_curve(self):
+        dc = self.gen_curves()
+        self.drug_curve = dc[0]
 ##############################################################################
-# Wrapper methods for plotting
-  
-    def plot_timecourse(self,counts_t=None,title_t=None):
-        fig = plotter.plot_timecourse(self,counts_t=counts_t,title_t=title_t)
-        return fig
-    
-    def plot_fitness_curves(self,fig_title='',plot_r0 = False,save=False,
-                            savename=None,**kwargs):
-        fig,ax = plotter.plot_fitness_curves(self,fig_title=fig_title,
-                                          plot_r0 = plot_r0,save=save,
-                                          savename=savename,**kwargs)
-        return fig,ax
-    
+
+    def reset_drug_conc_curve(self,**kwargs):
+        """Resets the drug concentration curve. Also updates any paramters passed into kwargs.
+           Useful when performing experiments with a large number of population objects. Eliminates the need to repeatedly
+           estimate fitness seascapes.
+        """
+        for paramkey in self.__dict__.keys():
+            for optkey in kwargs.keys():
+                if paramkey == optkey:
+                    td = {paramkey:kwargs.get(paramkey)}
+                    self.__dict__.update(td)
+        
+        self.set_drug_curve()

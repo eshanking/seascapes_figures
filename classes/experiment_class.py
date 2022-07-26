@@ -1,5 +1,5 @@
-from fears.classes.population_class import Population
-from fears.utils import plotter, dir_manager, fitness
+from seascapes_figures.classes.population_class import Population
+from seascapes_figures.utils import plotter, dir_manager, fitness
 import numpy as np
 import pandas as pd
 # import warnings
@@ -7,11 +7,13 @@ import os
 import time
 import pickle
 import lifelines
+import copy
 
 class Experiment():
 
     # Initializer
     def __init__(self,
+                slopes=None,
                  n_sims = 1,
                  curve_types = None,
                  max_doses = None,
@@ -28,10 +30,10 @@ class Experiment():
                  prob_drops = None,
                  n_impulse=1,
                  population_options = {},
-                 slopes=None,
                  passage=False,
                  passage_time = 48,
-                 debug = True): # debug = True -> no save
+                 debug = True,
+                 population_template=None): # debug = True -> no save
     
         self.root_path = str(dir_manager.get_project_root())
         
@@ -213,33 +215,30 @@ class Experiment():
             
         elif self.experiment_type == 'rate-survival':
             # if the curve type is 'pharm' then slope will be interpreted as k_abs
+
+            # initialize one population object
             self.slopes = slopes
+            
+            if population_template is None:
+                p0 = Population(max_dose=self.max_doses[0],
+                                k_abs=self.slopes[0],
+                                curve_type='pharm',
+                                n_sims=1,
+                                passage=passage,
+                                passage_time=passage_time,
+                                **self.population_options)
+            else:
+                p0 = population_template
+
             for slope in self.slopes:
-                if curve_types[0] == 'pharm':
-                    self.populations.append(Population(max_dose=self.max_doses[0],
-                                                        k_abs=slope,
-                                                        curve_type='pharm',
-                                                        n_sims=1,
-                                                        passage=passage,
-                                                        passage_time=passage_time,
-                                                        **self.population_options))
-                elif curve_types[0] == 'pulsed':
-                    self.populations.append(Population(max_dose=self.max_doses[0],
-                                                        k_abs=slope,
-                                                        curve_type='pulsed',
-                                                        n_sims=1,
-                                                        passage=passage,
-                                                        passage_time=passage_time,
-                                                        **self.population_options))
-                else:
-                    self.populations.append(Population(max_dose=self.max_doses[0],
-                                                        slope=slope,
-                                                        curve_type='linear',
-                                                        n_sims=1,
-                                                        passage=passage,
-                                                        passage_time=passage_time,
-                                                        **self.population_options))                        
-                    
+                # if curve_types[0] == 'pharm':
+                    # print(population_options)
+
+                p = copy.copy(p0)
+                p.reset_drug_conc_curve(k_abs=slope)
+
+                self.populations.append(p)     
+                
             # self.rate_survival_results = pd.DataFrame(columns=[])
             
         # generate new save folder
@@ -266,7 +265,6 @@ class Experiment():
             os.mkdir(save_folder) 
             
             self.results_path = save_folder
-            # self.experiment_info_path = self.root_path + os.sep + 'results' + os.sep + 'experiment_info_' + date_str + '_' + num_str + '.p'
             self.experiment_info_path = self.results_path + os.sep + 'experiment_info_' + date_str + '_' + num_str + '.p'
             self.exp_folders = []
             
@@ -309,11 +307,19 @@ class Experiment():
             counts_seascape, ft = self.p_seascape.simulate()
             
             if not self.debug:
-                savedata = np.concatenate((counts_landscape,drug_curve),axis=1)
-                self.save_counts(savedata, num=None, save_folder=None,prefix = 'landscape_counts')
+                data_dict_landscape = {'counts':counts_landscape,
+                                'drug_curve':drug_curve}
+                self.save_dict(data_dict_landscape,save_folder='null_seascape')
+
+                data_dict_seascape = {'counts':counts_seascape,
+                                'drug_curve':drug_curve}
+                self.save_dict(data_dict_seascape,save_folder='natural_seascape')
+
+                # savedata = np.concatenate((counts_landscape,drug_curve),axis=1)
+                # self.save_counts(savedata, num=None, save_folder=None,prefix = 'landscape_counts')
                 
-                savedata = np.concatenate((counts_seascape,drug_curve),axis=1)
-                self.save_counts(savedata, num=None, save_folder=None,prefix = 'seascape_counts')
+                # savedata = np.concatenate((counts_seascape,drug_curve),axis=1)
+                # self.save_counts(savedata, num=None, save_folder=None,prefix = 'seascape_counts')
         
         elif self.experiment_type == 'inoculant-survival':
             # pbar = tqdm(total = n_curves*n_inoc) # progress bar
@@ -352,14 +358,14 @@ class Experiment():
                     
                     u = np.array([u,])
                     u = u.transpose()
-                    counts = np.concatenate((counts,drug,u),axis=1)
+                    # counts = np.concatenate((counts,drug,u),axis=1)
   
                     if not self.debug:
                         # self.save_counts(counts,i,save_folder)
                         data_dict = {'counts':counts,
                                      'drug_curve':drug,
                                      'regimen':u}
-                        self.save_dict(data_dict,i,save_folder)
+                        self.save_dict(data_dict,save_folder,num=i)
                 # kk+=1
                 # pbar.update()
                 self.perc_survive = 100*self.n_survive/self.n_sims
@@ -414,11 +420,12 @@ class Experiment():
                         else:
                             save_folder = 'slope=' + str(p.slope)
                             save_folder.replace('.',',')
-                        self.save_counts(counts,n,save_folder)
+                        # self.save_counts(counts,n,save_folder)
                         data_dict = {'counts':counts,
                                      'drug_curve':drug}
-                        self.save_dict(data_dict,n,save_folder)
-        # pickle.dump(self, open(self.experiment_info_path,"wb"))
+                        self.save_dict(data_dict,save_folder,num=n)
+        if not self.debug:
+            pickle.dump(self, open(self.experiment_info_path,"wb"))
         
                     
                 # fig_savename = 'slope = ' + str(p.slope)
@@ -448,7 +455,7 @@ class Experiment():
         # self.savename = savename
         return
     
-    def save_dict(self,data_dict,num,save_folder,prefix='sim_'):
+    def save_dict(self,data_dict,save_folder,prefix='sim_',num=None):
         # check if the desired save folder exists. If not, create it
         if save_folder is None:
             save_folder = ''
@@ -546,10 +553,11 @@ class Experiment():
             event_time = len(c)
         else:
             event_obs = 1
-            event_time = e[0]
+            event_time = e[0][0]
         
-        timestep_scale = pop.timestep_scale
-        event_time = event_time*timestep_scale
+        # timestep_scale = pop.timestep_scale
+        # event_time = event_time*timestep_scale
+        
         
         return event_obs, event_time
     
@@ -569,11 +577,11 @@ class Experiment():
             event_time = len(c)
         else:
             event_obs = 1
-            event_time = e[0]
+            event_time = e[0][0]
         
-        timestep_scale = pop.timestep_scale
-        event_time = event_time*timestep_scale
-        
+        # timestep_scale = pop.timestep_scale
+        # event_time = event_time*timestep_scale
+        # print(event_time)
         return event_obs, event_time
     
     def log_rank_test(self,durations_A, durations_B, 
