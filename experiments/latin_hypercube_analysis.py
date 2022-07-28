@@ -175,9 +175,9 @@ print('Runtime per sim: ' + str(round(avg_runtime_per_sim)))
 # Interpolate results in 3D
 
 x = tuple([sample_raw[:,0],sample_raw[:,1],sample_raw[:,2]])
-v = interpolate(x,results)
+v = interpolate(x,results,method='nearest')
 
-extent = np.min(x), np.max(x), np.min(y), np.max(y)
+# extent = np.min(x), np.max(x), np.min(y), np.max(y)
 
 # death rate vs mutation rate
 
@@ -186,7 +186,7 @@ extent = np.min(x), np.max(x), np.min(y), np.max(y)
 fig,ax = plt.subplots(nrows=1,ncols=3,constrained_layout=False,figsize=(10,15))
 extent = np.min(x[0]), np.max(x[0]), np.min(x[1]), np.max(x[1])
 
-ax[0].imshow(np.nanmean(v,axis=2),extent=extent,origin='lower')
+ax[0].imshow(np.nanmean(v,axis=2),origin='lower')
 # ax[0].title('Death rate vs mutation rate')
 ax[0].set_xlabel('Death rate')
 ax[0].set_ylabel('Mutation rate')
@@ -202,9 +202,9 @@ ax[0].set_yticklabels(ytl)
 
 # mutation rate vs carrying capacity
 
-extent = np.min(x[1]), np.max(x[1]), np.min(x[2]), np.max(x[2])
+# extent = np.min(x[1]), np.max(x[1]), np.min(x[2]), np.max(x[2])
 
-im = ax[1].imshow(np.nanmean(v,axis=0),extent=extent,origin='lower')
+im = ax[1].imshow(np.nanmean(v,axis=0),origin='lower')
 # ax[1].title('Mutation rate vs carrying capacity')
 ax[1].set_xlabel('Mutation rate',labelpad=0.35)
 ax[1].set_ylabel('Carrying capacity')
@@ -220,9 +220,9 @@ carrying_cap_labels = ytl
 
 # death rate vs carrying capacity
 
-extent = np.min(x[0]), np.max(x[0]), np.min(x[2]), np.max(x[2])
+# extent = np.min(x[0]), np.max(x[0]), np.min(x[2]), np.max(x[2])
 
-ax[2].imshow(np.nanmean(v,axis=1),extent=extent,origin='lower')
+ax[2].imshow(np.nanmean(v,axis=1),origin='lower',interpolation='none')
 # ax[1].title('Death rate vs carrying capacity')
 ax[2].set_xlabel('Death rate')
 ax[2].set_ylabel('Carrying capacity')
@@ -245,4 +245,4 @@ axins = inset_axes(ax[1],
                    )
 fig.colorbar(im, cax=axins, orientation="horizontal",label='Survival probability range')
 
-fig.savefig('lhs_analysis.pdf')
+fig.savefig('lhs_analysis_nearest.pdf',bbox_inches='tight')

@@ -28,7 +28,6 @@ class Experiment():
                  inoculants = None,
                  experiment_type = None,
                  prob_drops = None,
-                 n_impulse=1,
                  population_options = {},
                  passage=False,
                  passage_time = 48,
