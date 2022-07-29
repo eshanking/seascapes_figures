@@ -1,9 +1,8 @@
 import os
-from turtle import right
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-from seascapes_figures.utils import results_manager, plotter
+from fears.utils import results_manager
 
 def load_exp_info(info_path):
     return pickle.load(open(info_path, 'rb'))

@@ -1,8 +1,7 @@
 import os
 import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoLocator
 import numpy as np
-from seascapes_figures.utils import results_manager, plotter, dir_manager
+from fears.utils import results_manager, dir_manager
 import pandas as pd
 import pickle
 
