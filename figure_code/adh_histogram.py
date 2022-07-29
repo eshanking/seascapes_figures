@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 # from matplotlib.ticker import AutoLocator
 import matplotlib as mpl
 import numpy as np
-from seascapes_figures.utils import results_manager
-import pandas as pd
+from fears.utils import results_manager
 import pickle
 
 def make_fig(exp=None,exp_info_path=None):
