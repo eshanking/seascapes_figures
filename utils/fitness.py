@@ -530,10 +530,11 @@ class Fitness:
 
         # assumes outer row is background data
         data_keys = self.get_data_keys(df)
-        time = df['Time [s]']
+        time = np.array(df['Time [s]'])
 
         for k in data_keys:
-            growth_rates[k] = self.est_growth_rate(df[k],t=time)
+            gr = np.array(df[k])
+            growth_rates[k] = self.est_growth_rate(gr,t=time)
             # cur_genotype = k[0]
             # if cur_genotype == prev_genotype:
             #     growth_rates[k] = est_growth_rate(df[k],t=time,carrying_cap=cc)
@@ -677,81 +678,37 @@ class Fitness:
         """
         growth_curve = growth_curve/carrying_cap
 
-        if method == 'custom':
-            if t is None:
-                t = np.arange(len(growth_curve))
-
-            if not isinstance(growth_curve,np.ndarray):
-                growth_curve = np.array(growth_curve)
-            
-            # normalize to range (0,1)
-            growth_curve = growth_curve - min(growth_curve)
-            if carrying_cap is not None:
-                growth_curve = growth_curve/carrying_cap
-            else:
-                growth_curve = growth_curve/max(growth_curve)
-
-            # compute derivative
-            dpdt = np.zeros(len(growth_curve)-1)
-            r = np.zeros(len(dpdt))
-            for i in range(len(growth_curve)-1):
-                p = growth_curve[i]
-                dp = growth_curve[i+1] - growth_curve[i]
-                dt = t[i+1] - t[i]
-                dpdt[i] = dp/dt
-                # compute r
-                if p == 0 or 1-p == 0:
-                    r[i] = 0
-                else:
-                    r[i] = dpdt[i]/(1/(p*(1-p)))
-            
-            if debug:
-                fig,ax = plt.subplots(nrows=3)
-                ax[0].hist(r)
-                ax[1].plot(t,growth_curve)
-                ax[2].plot(t[:-1],r)
-                ax[0].set_title('Growth rate histogram')
-                ax[0].set_xlabel('$r$')
-                ax[1].set_title('Normalized growth curve')
-                ax[1].set_xlabel('t (s)')
-                ax[2].set_title('Growth rate over time')
-                ax[2].set_xlabel('t (s)')
-                plt.tight_layout()
-            
-            r = np.max(r)
-
         # curve fit using scipy
-        elif method == 'scipy':
 
-            p0 = [10**-6,0.05,1]
+        p0 = [10**-6,0.05,1]
 
-            popt, pcov = scipy.optimize.curve_fit(self.logistic_growth_curve,
-                                                t,growth_curve,p0=p0,
-                                                bounds=(0,1))
+        popt, pcov = scipy.optimize.curve_fit(self.logistic_growth_curve,
+                                            t,growth_curve,p0=p0,
+                                            bounds=(0,1))
 
-            r = popt[0]
-            if r < 0:
-                r = 0
-            if popt[2] < popt[1]: # if the carrying capacity is less than the initial population size
-                r = 0
-            if popt[2] < 0.05:
-                r = 0
-            
-            if debug:
-                fig,ax = plt.subplots()
-
-                ax.plot(t,growth_curve)
-
-                est = self.logistic_growth_curve(t,popt[0],popt[1],popt[2])
-                
-                ax.plot(t,est)
-                # print(popt[0])
-                p0 = round(popt[1]*10**5)/10**5
-                k = round(popt[2]*10**5)/10**5
-                r = round(r*10**5)/10**5
-                title = str(r*(60**2)) + ' ' + str(p0) + ' ' + str(k)
-                ax.set_title(title)
+        r = popt[0]
+        if r < 0:
+            r = 0
+        if popt[2] < popt[1]: # if the carrying capacity is less than the initial population size
+            r = 0
+        if popt[2] < 0.05:
+            r = 0
         
+        if debug:
+            fig,ax = plt.subplots()
+
+            ax.plot(t,growth_curve)
+
+            est = self.logistic_growth_curve(t,popt[0],popt[1],popt[2])
+            
+            ax.plot(t,est)
+            # print(popt[0])
+            p0 = round(popt[1]*10**5)/10**5
+            k = round(popt[2]*10**5)/10**5
+            r = round(r*10**5)/10**5
+            title = str(r*(60**2)) + ' ' + str(p0) + ' ' + str(k)
+            ax.set_title(title)
+    
         if save_debug:
             if num is None:
                 savename = 'debug' + os.sep + 'debug_fig.pdf'

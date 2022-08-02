@@ -271,7 +271,7 @@ class Plotter():
         
         return fig,ax
 
-    def plot_msw(self,wt,pop=None,conc=None,fc=None,ncols=2,figsize=(2.5,8)):
+    def plot_msw(self,wt,pop=None,conc=None,fc=None,ncols=2,figsize=(2.5,8),labelsize=10,ticklabelsize=10):
         """
         plot_msw: method for plotting mutant selection window figures.
 
@@ -303,6 +303,7 @@ class Plotter():
             fc =  pop.gen_fitness_curves(conc=conc)
 
         rows = int((pop.n_allele)/ncols)
+
         fig, ax = plt.subplots(rows,ncols,figsize=figsize)
         
         neighbors = pop.gen_neighbors(wt)
@@ -311,45 +312,74 @@ class Plotter():
         i = 0
 
         if ax.ndim == 1:
-            for r in range(rows):
-                # for col in range(ncols):
-                n = neighbors[i]
-                wtlabel = pop.int_to_binary(wt) + ' (wt)'
-                ax[r].plot(conc,wt_fitness_curve,label=wtlabel,linewidth=3)
-                
-                bitstring = pop.int_to_binary(n)    
-                ax[r].plot(conc,fc[n],label=bitstring,linewidth=3)
+            if rows > 1:
+                for r in range(rows):
+                    # for col in range(ncols):
+                    n = neighbors[i]
+                    wtlabel = pop.int_to_binary(wt)
+                    ax[r].plot(conc,wt_fitness_curve,label=wtlabel,linewidth=3,color='snow')
+                    
+                    bitstring = pop.int_to_binary(n)    
+                    ax[r].plot(conc,fc[n],label=bitstring,linewidth=3,color='black')
 
-                msw_left,msw_right = self.get_msw(wt_fitness_curve,fc[n],conc)
-                ax[r].axvspan(msw_left, msw_right, 
-                        facecolor='#2ca02c',alpha=0.7)
-                        # label='MSW')
-                ax[r].axvspan(min(conc),msw_left, 
-                        facecolor='#ff7f00',alpha=0.7)
-                        # label='MSW')
-                ax[r].axvspan(msw_right,max(conc), 
-                        facecolor='#e41a1c',alpha=0.7)
-                        # label='MSW')
-                ax[r].set_xscale('log')
-                ax[r].set_xlim([10**pop.drug_conc_range[0],10**pop.drug_conc_range[1]])
-                ax[r].legend(fontsize=10,frameon=False,loc='upper right')
-                self.shifty(ax[r],i*-0.01)
-                i+=1
-            for r in range(rows):
-                # ax[r,0].set_ylabel('$R_{0}$',fontsize=10)
-                ax[r].set_ylabel('Replication rate',fontsize=10)
-            # for c in range(rows):
-            #     ax[c].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
-            #                           fontsize=15)
-                # for col in range(ncols):
-                ax[-1].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
-                                        fontsize=10)
+                    msw_left,msw_right = self.get_msw(wt_fitness_curve,fc[n],conc)
+                    ax[r].axvspan(msw_left, msw_right, 
+                            facecolor='#2ca02c',alpha=0.7)
+                            # label='MSW')
+                    ax[r].axvspan(min(conc),msw_left, 
+                            facecolor='#ff7f00',alpha=0.7)
+                            # label='MSW')
+                    ax[r].axvspan(msw_right,max(conc), 
+                            facecolor='#e41a1c',alpha=0.7)
+                            # label='MSW')
+                    ax[r].set_xscale('log')
+                    ax[r].set_xlim([10**pop.drug_conc_range[0],10**pop.drug_conc_range[1]])
+                    ax[r].legend(fontsize=10,frameon=False,loc='upper right')
+                    self.shifty(ax[r],i*-0.02)
+                    i+=1
+                for r in range(rows):
+                    # ax[r,0].set_ylabel('$R_{0}$',fontsize=10)
+                    ax[r].set_ylabel('Growth rate \n(hr$^-1$)',fontsize=labelsize)
+                # for c in range(rows):
+                #     ax[c].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
+                #                           fontsize=15)
+                    # for col in range(ncols):
+                    ax[-1].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
+                                            fontsize=labelsize)
+            elif ncols >1:
+                for col in range(ncols):
+                    n = neighbors[i]
+                    wtlabel = pop.int_to_binary(wt)
+                    ax[col].plot(conc,wt_fitness_curve,label=wtlabel,linewidth=3)
+                    
+                    bitstring = pop.int_to_binary(n)    
+                    ax[col].plot(conc,fc[n],label=bitstring,linewidth=3)
+
+                    msw_left,msw_right = self.get_msw(wt_fitness_curve,fc[n],conc)
+                    ax[col].axvspan(msw_left, msw_right, 
+                            facecolor='#2ca02c',alpha=0.7)
+                            # label='MSW')
+                    ax[col].axvspan(min(conc),msw_left, 
+                            facecolor='#ff7f00',alpha=0.7)
+                            # label='MSW')
+                    ax[col].axvspan(msw_right,max(conc), 
+                            facecolor='#e41a1c',alpha=0.7)
+                            # label='MSW')
+                    ax[col].set_xscale('log')
+                    ax[col].set_xlim([10**pop.drug_conc_range[0],10**pop.drug_conc_range[1]])
+                    ax[col].legend(fontsize=10,frameon=False,loc='upper right')
+                    self.shiftx(ax[col],i*0.01)
+                    i+=1
+                for col in range(ncols):
+                    ax[0].set_ylabel('Growth rate \n(hr$^-1$)',fontsize=labelsize)
+                    ax[col].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
+                                            fontsize=labelsize)
         
         else:
             for r in range(rows):
                 for col in range(ncols):
                     n = neighbors[i]
-                    wtlabel = pop.int_to_binary(wt) + ' (wt)'
+                    wtlabel = pop.int_to_binary(wt)
                     ax[r,col].plot(conc,wt_fitness_curve,label=wtlabel,linewidth=3)
                     
                     bitstring = pop.int_to_binary(n)    
@@ -372,13 +402,17 @@ class Plotter():
             
             for r in range(rows):
                 # ax[r,0].set_ylabel('$R_{0}$',fontsize=10)
-                ax[r,0].set_ylabel('Replication \nrate',fontsize=15)
+                ax[r,0].set_ylabel('Replication \nrate',fontsize=labelsize)
             # for c in range(rows):
             #     ax[c].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
             #                           fontsize=15)
             for col in range(ncols):
                 ax[-1,col].set_xlabel('Drug concentration \n($\mathrm{\mu}$M)',
-                                        fontsize=15)
+                                        fontsize=labelsize)
+            
+        for a in ax:
+            a.tick_params(axis='both',labelsize=ticklabelsize)
+            
         """
         n_genotype = pop.n_genotype
         rows = int((n_genotype-1)/2)
@@ -1069,7 +1103,7 @@ class Plotter():
                 # wt selection window
                 x = [min(conc),min(conc),msw_left,msw_left]
                 y = [ylevel-h,ylevel,ylevel,ylevel-h]
-                wt = ax.fill(x,y,'#ff7f00',alpha=0.7,label='wt selection')
+                wt = ax.fill(x,y,'#ff7f00',alpha=0.7,label='reference selection')
 
                 # mutant selection window
                 # print(msw_right)
@@ -1084,7 +1118,7 @@ class Plotter():
                 ax.plot(conc,y,color='black',linewidth=0.5)
 
                 label = pop.int_to_binary(n)
-                pos = (10**-4.4,ylevel-(0.8*h))
+                pos = (10**-4.5,ylevel-(0.8*h))
                 ax.annotate(label,pos,xycoords='data',annotation_clip=False,fontsize=8)
 
                 ylevel += -h
