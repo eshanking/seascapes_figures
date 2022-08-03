@@ -1,5 +1,3 @@
-import sys
-sys.path.append('/home/esk81')
 from scipy.stats.qmc import LatinHypercube
 import scipy.interpolate
 import numpy as np
@@ -7,7 +5,7 @@ import time
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from rate_survival_experiment_pharm import make_data
-from seascapes_figures.figure_code.rate_of_change_km_fig import make_fig
+from fears.utils.stats import km_curve
 # from seascapes_figures.utils import plotter
 
 np.random.seed(2022)
@@ -42,7 +40,7 @@ def scale_to_range(data,range):
 
 def get_outcome(e):
 
-    km_data = make_fig(e)
+    km_data = km_curve(e)
     result = calculate_result_range(km_data,e)
 
     return result
