@@ -1,7 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from seascapes_figures.utils import results_manager, dir_manager
+from fears.utils import results_manager
 import pandas as pd
 import pickle
 
