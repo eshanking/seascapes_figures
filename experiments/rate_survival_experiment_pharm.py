@@ -1,4 +1,4 @@
-from seascapes_figures.classes.experiment_class import Experiment
+from fears.experiment import Experiment
 import numpy as np
     
 def make_data(death_rate=None,
@@ -18,7 +18,7 @@ def make_data(death_rate=None,
    experiment_type = 'rate-survival'
       
    if n_sims is None:
-      n_sims = 500
+      n_sims = 1
    #  n_sims = 1
 
    # slopes = np.array([0.4,0.5,0.6,0.7])*10**-3
