@@ -1,5 +1,7 @@
-from seascapes_figures.classes.population_class import Population
-from seascapes_figures.utils import plotter, results_manager
+# from seascapes_figures.classes.population_class import Population
+# from seascapes_figures.utils import plotter, results_manager
+from fears.population import Population
+from fears.utils import plotter, results_manager
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -15,7 +17,7 @@ for col in range(4):
         legend = True
     else:
         legend = False
-    ax[col] = p.msw_grid(g,ax=ax[col],legend=legend)
+    ax[col] = plotter.msw_grid(p,g,ax=ax[col],legend=legend)
     ax[col].set_xlabel(p.drug_units)
     k+=1
 
