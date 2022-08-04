@@ -23,7 +23,7 @@ for col in range(4):
 
 shift = 1
 for col in range(1,4):
-    ax[col] = p.shiftx(ax[col],0.01*shift)
+    ax[col] = plotter.shiftx(ax[col],0.01*shift)
     shift+=1
 
 # ax[1,0].set_xlabel(p.drug_units)
@@ -31,8 +31,8 @@ for col in range(1,4):
 
 # ax[0].set_ylabel('Comparison',labelpad=35)
 
-results_manager.save_fig(fig,'msw_grid_ecoli.pdf')
+# results_manager.save_fig(fig,'msw_grid_ecoli.pdf')
 
-# fig = p.plot_msw(1,ncols=1,figsize=(10,2))
-fig = p.plot_msw(1,ncols=1,figsize=(2.5,8),labelsize=14,ticklabelsize=12)
-results_manager.save_fig(fig,'msw_1_ecoli.pdf')
+# # fig = p.plot_msw(1,ncols=1,figsize=(10,2))
+# fig = p.plot_msw(1,ncols=1,figsize=(2.5,8),labelsize=14,ticklabelsize=12)
+# results_manager.save_fig(fig,'msw_1_ecoli.pdf')
