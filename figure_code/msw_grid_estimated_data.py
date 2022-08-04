@@ -33,6 +33,6 @@ for col in range(1,4):
 
 # results_manager.save_fig(fig,'msw_grid_ecoli.pdf')
 
-# # fig = p.plot_msw(1,ncols=1,figsize=(10,2))
-fig = plotter.plot_msw(p,1,ncols=1,figsize=(2.5,8),labelsize=14,ticklabelsize=12)
+fig = plotter.plot_msw(p,1,ncols=1,figsize=(2.5,8))
+# fig = plotter.plot_msw(p,1,ncols=1,figsize=(2.5,8),labelsize=14,ticklabelsize=12)
 # results_manager.save_fig(fig,'msw_1_ecoli.pdf')
