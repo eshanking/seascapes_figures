@@ -1,5 +1,5 @@
-from seascapes_figures.classes.population_class import Population
-from seascapes_figures.utils import results_manager
+from fears.population import Population
+from fears.utils import results_manager
 import matplotlib.pyplot as plt
 import numpy as np
 
