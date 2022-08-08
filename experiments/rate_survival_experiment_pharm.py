@@ -45,8 +45,8 @@ def make_data(death_rate=None,
          #    'mut_rate':10**-9,
             'mut_rate':mut_rate,
             # 'mut_rate':10**-3,
-            'carrying_cap':True,
-            'max_cells':carrying_cap,
+            'use_carrying_cap':True,
+            'carrying_cap':carrying_cap,
             'n_timestep':2000,
             'init_counts':init_counts,
             # 'k_abs':0.95,
@@ -60,6 +60,7 @@ def make_data(death_rate=None,
          #    'ic50_data':'pyrimethamine_ic50.csv',
             'fitness_data':'estimate',
             'null_seascape':False,
+            'debug':False
             # 'null_seascape_dose':1
             # 'null_seascape_method':'sort'
             }
