@@ -25,10 +25,11 @@ fig.savefig('2_allele_grid.pdf')
 
 # fig2 = plotter.plot_msw(p,2,ncols=1,figsize=(2.5,4))
 fig2, ax = plotter.plot_msw(p,2,ncols=2,figsize=(6,2))
-fig2.savefig('2_allele_msws.pdf')
 
 for a in ax:
     a.yaxis.tick_right()
+
+fig2.savefig('2_allele_msws.pdf',bbox_inches='tight')
 
 fig3,ax = plt.subplots(figsize=(6,3))
 
