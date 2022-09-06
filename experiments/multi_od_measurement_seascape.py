@@ -24,7 +24,7 @@ def logistic_growth_curve(t,r,p0,k):
 
     return p
 
-def est_logistic_params(growth_curve,t,debug=False):
+def est_logistic_params(growth_curve,t,debug=False,sigma=None):
     """Estimates growth rate from OD growth curve
 
     Args:
@@ -35,10 +35,10 @@ def est_logistic_params(growth_curve,t,debug=False):
         dict: Dict of logistic growth curve paramters
     """
 
-    # p0 = [10**-6,0.1,1.5] # starting parameters
+    p0 = [10**-3,0.1,0.5] # starting parameters
 
     popt, pcov = sciopt.curve_fit(logistic_growth_curve,
-                                        t,growth_curve)
+                                        t,growth_curve,p0=p0,sigma=sigma)
     
     rate_indx = 0 # index of the optimized data points referring to the growth rate
     p0_indx = 1 # index of the optimized data points referring to initial population size
@@ -52,10 +52,10 @@ def est_logistic_params(growth_curve,t,debug=False):
 
     if r < 0: # if the growth rate is negative
         r = 0
-    if cc < p0: # if the carrying capacity is less than the initial population size
-        r = 0
-    if cc < min_carrying_cap: # if the carrying cap is less the minimum threshold
-        r = 0
+    # if cc < p0: # if the carrying capacity is less than the initial population size
+    #     r = 0
+    # if cc < min_carrying_cap: # if the carrying cap is less the minimum threshold
+    #     r = 0
 
     d = {'gr':r,
             'OD_0':p0,
@@ -226,11 +226,11 @@ scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
 
 bg_keys = ['A12','B12','C12','D12','E12','F12','G12','H12']
 drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,0]
-folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
+folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
 
 plate_paths = get_plate_paths(folder_path)
 
-# fig,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(10,8))
+fig,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(10,8))
 
 count = 0
 
@@ -239,9 +239,9 @@ for pp in plate_paths:
     row = int(np.floor(count/4))
     col = int(np.mod(count,4))
 
-    # ax = ax_list[row,col]
+    ax = ax_list[row,col]
 
-    fig,ax = plt.subplots()
+    # fig,ax = plt.subplots()
 
     data_paths0 = get_data_file_paths(pp)
 
@@ -313,12 +313,13 @@ for pp in plate_paths:
         drug_indx = int(c)-1
         dc = drug_conc[drug_indx]
         color = scalarMap.to_rgba([drug_indx])
-        ax.errorbar(t_vect,data_avg[c],yerr=data_std[c],label=c,color=color)
+        ax.errorbar(t_vect,data_avg[c],yerr=data_std[c],label=c,color=color,fmt='*')
 
         # plot curve fit
-        if d['gr'] != 0:
-            cf = [logistic_growth_curve(t,d['gr'],d['OD_0'],d['OD_max']) for t in t_vect]
-            ax.plot(t_vect,cf,color=color)
+        # if d['gr'] != 0:
+        cf = [logistic_growth_curve(t,d['gr'],d['OD_0'],d['OD_max']) for t in t_vect]
+        ax.plot(t_vect,cf,color=color)
+        # d_t = d
 
 
     handles, labels = ax.get_legend_handles_labels()
@@ -328,3 +329,4 @@ for pp in plate_paths:
     count += 1
 
 plt.tight_layout()
+fig.savefig('logistic_growth_fit.pdf')
