@@ -1,3 +1,4 @@
+#%%
 import os
 import pandas as pd
 import datetime
@@ -7,8 +8,129 @@ from matplotlib import cm
 import matplotlib.colors as colors
 import matplotlib.cm as mplcm
 import scipy.optimize as sciopt
+import scipy.interpolate as sciinter
 import re
 from fears.utils import plotter
+
+def logistic_pharm_curve(x,IC50,g_drugless,hill_coeff):
+    """Defines the logistic dose-response curve. Use if the input is a vector of drug concentration curves
+
+    Args:
+        x (numpy array): drug concentration vector
+        IC50 (float)): IC50
+        g_drugless (float): drugless growth rate
+        hill_coeff (float): Hill coefficient
+
+    Returns:
+        numpy array: array of growth rates
+    """
+    g = []
+
+    for x_t in x:
+        if x_t == 0:
+            g.append(g_drugless)
+        else:
+            g.append(g_drugless/(1+np.exp((IC50-np.log10(x_t))/hill_coeff)))
+
+    return g
+
+def est_ic50(gr,dc):
+    indx = np.argwhere(gr)[0][0]
+    ic50 = dc[indx]
+    return np.log10(ic50)
+
+
+def fit_hill_curve(xdata,ydata,hc=None,debug=False,interpolate=False):
+    """Fits dose-response curve to growth rate data
+
+    Args:
+        xdata (list or numpy array): drug concentration curve from plate experiment
+        ydata (list or numpy array): growth rate versus drug concetration for a given replicate
+
+    Returns:
+        list: List of optimized paramters: IC50, drugless growth rate, and Hill coefficient
+    """
+    if interpolate:
+        # interpolate data
+        xd_t = xdata
+        yd_t = ydata
+        f = sciinter.interp1d(xdata,ydata)
+
+        if min(xdata) == 0:
+            xmin = np.log10(xdata[1]) # if xdata starts at zero, set the new xmin to be the log of the next smallest value
+        else:
+            xmin = np.log10(min(xdata))
+        xmax = np.log10(max(xdata))
+
+        xdata = np.logspace(xmin,xmax)
+        if not xdata[0] == 0:
+            xdata = np.insert(xdata,0,0) # add zero back to xdata if removed before (because of log(0) error)
+
+        ydata = f(xdata) # interpolate new ydata points
+    else:
+        xd_t = xdata
+        yd_t = ydata
+
+    if hc is None: # want to estimate hill coefficient as well
+
+        ic50_est = est_ic50(yd_t,xd_t)
+
+        p0 = [ic50_est,ydata[-1],-0.1]
+
+        # if ydata[0] == 0:
+        #     g_drugless_bound = [0,1]
+        # else:
+        #     # want the estimated drugless growth rate to be very close to the value given in ydata
+        #     g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
+
+        bounds = ([ic50_est-0.5,ydata[-1]-0.05,-0.12],[ic50_est+0.5,ydata[-1]+0.05,-0.09]) # these aren't magic numbers these are just starting parameters that happen to work
+
+        popt, pcov = sciopt.curve_fit(logistic_pharm_curve,
+                                            xdata,ydata,p0=p0,bounds=bounds)
+    
+    # else: # we already know the hill coefficient, estimate everything else
+    #     p0 = [0,ydata[0]]
+
+    #     # print(p0)
+
+    #     if ydata[0] == 0:
+    #         g_drugless_bound = [0,1]
+    #     else:
+    #         # want the estimated drugless growth rate to be very close to the value given in ydata
+    #         g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
+
+    #     fitfun = partial(self.logistic_pharm_curve_vectorized,hill_coeff=hc)
+
+    #     bounds = ([-5,g_drugless_bound[0]],[4,g_drugless_bound[1]])
+    #     popt, pcov = scipy.optimize.curve_fit(fitfun,
+    #                                         xdata,ydata,p0=p0,bounds=bounds)            
+
+    d = {'ic50':popt[0],
+        'g_drugless':popt[1],
+        'hc':popt[2]}
+
+
+    if debug:
+        # est = [logistic_pharm_curve(x,popt[0],popt[1],popt[2]) for x in xdata]
+        est = logistic_pharm_curve(xdata,popt[0],popt[1],popt[2])
+        fig,ax = plt.subplots()
+
+        xd_plot = [np.log10(x) for x in xd_t if x > 0]
+
+        xd_plot = xd_plot + [-3]
+
+        ax.scatter(xd_plot,yd_t,marker='*')
+        ax.scatter(popt[0],popt[1]/2,color='r',marker='o')
+        # ax.plot(xdata,ydata)
+        ax.plot(xd_plot,est,color='black')
+        # ax.set_xscale('log')
+
+        title_t = 'IC50 = ' + str(round(popt[0],2)) + ' IC50_est = ' + str(ic50_est) + '\n hc = ' + str(round(popt[2],3)) + \
+                ' g = ' + str(round(popt[1],2)) + ' y0 = ' + str(round(ydata[-1],2))
+
+        ax.set_title(title_t)
+
+    return d
 
 def atoi(text):
     return int(text) if text.isdigit() else text
@@ -40,7 +162,8 @@ def logistic_growth_curve(t,r,p0,k):
 def linear_growth_curve(t,r,p0):
     return p0+r*t
 
-def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
+def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
+                        normalize=False):
     """Estimates growth rate from OD growth curve
 
     Args:
@@ -50,12 +173,30 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
     Returns:
         dict: Dict of logistic growth curve paramters
     """
+    # interpolate negative time
+
+    # t_ext = t[0]
+
+    # t = [tt+t[1] for tt in t]
+
+    # t_ext = [t_ext] + t
+
+    # t = t_ext
+
+    # growth_curve = [growth_curve[0]] + growth_curve
+
+    # normalize
+    if normalize:
+        norm_factor = max(growth_curve)
+        growth_curve = growth_curve/norm_factor
+    else:
+        norm_factor = 1
 
     # estimate cc
 
     cc_est = np.mean(growth_curve[-2:])
 
-    bounds = ([10**-6,0,cc_est-cc_est*0.1],[10**-3,0.1,cc_est+cc_est*0.1])
+    bounds = ([10**-6,0,cc_est-cc_est*0.1],[10**-3,0.3,cc_est+cc_est*0.1])
 
     p0 = [10**-3,0.1,cc_est] # starting parameters
 
@@ -63,7 +204,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
                                         t,growth_curve,p0=p0,sigma=sigma,
                                         bounds=bounds)
 
-    if mode == 'best':
+    if mode == 'best' or debug:
         popt_linear,pcov_linear = sciopt.curve_fit(linear_growth_curve,
                                             t,growth_curve,sigma=sigma)
     
@@ -72,8 +213,8 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
     carrying_cap_indx = 2 # index of the optmized data points referring to carrying capacity
 
     r = popt[rate_indx]
-    p0 = popt[p0_indx]
-    cc = popt[carrying_cap_indx]
+    p0 = popt[p0_indx]*norm_factor
+    cc = popt[carrying_cap_indx]*norm_factor
 
     min_carrying_cap = 0.4
 
@@ -83,8 +224,10 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
         r = 0
     if cc < min_carrying_cap: # if the carrying cap is less the minimum threshold
         r = 0
+    if norm_factor < 0.3:
+        r = 0
 
-    if mode == 'best':
+    if mode == 'best' or debug:
         est = [logistic_growth_curve(tt,popt[0],popt[1],popt[2]) for tt in t]
 
         r_lin = popt_linear[0]
@@ -95,7 +238,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
         logistic_resid = np.linalg.norm(np.array(est)-np.array(growth_curve))
         linear_resid   = np.linalg.norm(np.array(est_linear)-np.array(growth_curve))
 
-        if linear_resid < logistic_resid:
+        if mode == 'best' and (linear_resid < logistic_resid):
             r = r_lin*10
             
 
@@ -111,27 +254,27 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic'):
 
             est = [logistic_growth_curve(tt,popt[0],popt[1],popt[2]) for tt in t]
 
-            r_lin = popt_linear[0]
-            p0_lin = popt_linear[1]
+            # r_lin = popt_linear[0]
+            # p0_lin = popt_linear[1]
 
-            est_linear = [linear_growth_curve(tt,r_lin,p0_lin) for tt in t]
+            # est_linear = [linear_growth_curve(tt,r_lin,p0_lin) for tt in t]
 
-            logistic_resid = np.linalg.norm(np.array(est)-np.array(growth_curve))
-            linear_resid   = np.linalg.norm(np.array(est_linear)-np.array(growth_curve))
+            # logistic_resid = np.linalg.norm(np.array(est)-np.array(growth_curve))
+            # linear_resid   = np.linalg.norm(np.array(est_linear)-np.array(growth_curve))
             
-            if logistic_resid < linear_resid:
-                ax.plot(t,est,color='red')
-                ax.plot(t,est_linear,color='black')
-                # print(popt[0])
-                p0 = round(popt[1]*10**5)/10**5
-                k = round(popt[2]*10**5)/10**5
-                r = round(r*3600,2)
-                title = 'rate = ' + str(r) + ' cc = ' + str(k)
-            else:
-                ax.plot(t,est_linear,color='green')
-                ax.plot(t,est,color='black')
-                r = round(r_lin*3600,2)
-                title = 'rate = ' + str(r)
+            # if logistic_resid < linear_resid:
+            ax.plot(t,est,color='red')
+            ax.plot(t,est_linear,color='black')
+            # print(popt[0])
+            p0 = round(popt[1]*10**5)/10**5
+            k = round(popt[2]*10**5)/10**5
+            r = round(r*3600,2)
+            title = 'rate = ' + str(r) + ' cc = ' + str(k) + ' nf = ' + str(round(norm_factor,3))
+            # else:
+            #     ax.plot(t,est_linear,color='green')
+            #     ax.plot(t,est,color='black')
+            #     r = round(r_lin*3600,2)
+            #     title = 'rate = ' + str(r)
             ax.set_title(title)   
 
     return d,pcov
@@ -277,6 +420,7 @@ def get_start_time(df,col=4):
 
     return dt
 
+#%%
 num_colors = 12
 cm = cm.get_cmap('viridis',12)
 
@@ -290,7 +434,7 @@ folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
 
 plate_paths = get_plate_paths(folder_path)
 
-fig,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(10,8))
+fig,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(15,12))
 
 count = 0
 
@@ -372,13 +516,14 @@ for pp in plate_paths:
 
         # curve fit
 
-        d,pcov = est_logistic_params(data_avg[c],t_vect,sigma=data_std[c],
+        d,pcov = est_logistic_params(data_avg[c],t_vect,#sigma=data_std[c],
                                      debug=False,mode='logistic')
 
         drug_indx = int(c)-1
         dc = drug_conc[drug_indx]
         color = scalarMap.to_rgba([drug_indx])
-        ax.errorbar(t_vect,data_avg[c],yerr=data_std[c],label=c,color=color,fmt='*')
+        # ax.errorbar(t_vect,data_avg[c],yerr=data_std[c],label=c,color=color,fmt='*')
+        ax.errorbar(t_vect,data_avg[c],label=c,color=color,fmt='*')
 
         # plot curve fit
         # if d['gr'] != 0:
@@ -402,20 +547,81 @@ for pp in plate_paths:
     count += 1
 
 # plot dose-response curves
+plt.tight_layout()
 
 cc = plotter.gen_color_cycler()
 
+#%%
 fig2,ax2 = plt.subplots()
 ax2.set_prop_cycle(cc)
 
+
 for key in gr_lib:
     gr_t = [g*3600 for g in gr_lib[key]['avg'][0:-1]]
-    ax2.plot(drug_conc[0:-1],gr_t)
 
-ax2.set_xscale('log')
-# ax.set_ylim([0,0.5*10**-3])
+    dc_log = drug_conc
+
+    dc_log = [dc for dc in dc_log if type(dc) != str]
+
+    dc_log = [np.log10(dc) for dc in dc_log if dc > 0]
+
+    dc_log = dc_log + [-3]
+
+    ax2.plot(dc_log,gr_t)
 
 
-plt.tight_layout()
+plt.show()
+xtl = ax2.get_xticklabels()
+xt = ax2.get_xticks()
+# xtl_new = xtl
+xtl[1].set_text('nd')
+ax2.set_xticks(xt)
+ax2.set_xticklabels(xtl)
+
+ax2.set_xlim(-3,4)
+
+# ax2.set_xlim(0,10**4)
+
+#%%
+
+seascape_lib = {}
+for key in gr_lib:
+    
+    gr_t = gr_lib[key]['avg'][0:-1]
+    gr_t = [gr*3600 for gr in gr_t]
+
+    dc = [d for d in drug_conc if type(d) != str]
+
+    d = fit_hill_curve(dc,gr_t,debug=False,interpolate=False)
+    seascape_lib[key] = d
+
+fig3,ax3 = plt.subplots(figsize=(8,6))
+ax3.set_prop_cycle(cc)
+
+for key in seascape_lib:
+    dc_fit = np.logspace(-3.5,4)
+    
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
+    hc = seascape_lib[key]['hc']
+
+    g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
+
+    ax3.plot(dc_fit,g_est,linewidth=2,label=int(key))
+
+ax3.set_xscale('log')
+
+ax3.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=15)
+ax3.set_xlabel('Drug Concentration (ug/mL)',fontsize=15)
+ax3.spines['top'].set_visible(False)
+ax3.spines['right'].set_visible(False)
+
+ax3.tick_params(axis='both', labelsize=12)
+ax3.legend(loc=(1,0),frameon=False)
+# ax3.tick_params(axis='both', which='minor', labelsize=8)
+
+#%%
 fig.savefig('logistic_growth_fit.pdf')
-fig2.savefig('new_seascape.pdf')
+fig2.savefig('new_seascape.pdf',bbox_inches='tight')
+fig3.savefig('e_coli_seascape.pdf')
+# %%
