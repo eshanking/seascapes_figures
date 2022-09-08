@@ -83,7 +83,7 @@ def fit_hill_curve(xdata,ydata,hc=None,debug=False,interpolate=False):
         #     # want the estimated drugless growth rate to be very close to the value given in ydata
         #     g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
 
-        bounds = ([ic50_est-0.5,ydata[-1]-0.05,-0.12],[ic50_est+0.5,ydata[-1]+0.05,-0.09]) # these aren't magic numbers these are just starting parameters that happen to work
+        bounds = ([ic50_est-0.5,ydata[-1]-0.05,-0.2],[ic50_est+0.5,ydata[-1]+0.05,-0.01]) # these aren't magic numbers these are just starting parameters that happen to work
 
         popt, pcov = sciopt.curve_fit(logistic_pharm_curve,
                                             xdata,ydata,p0=p0,bounds=bounds)
@@ -224,7 +224,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
         r = 0
     if cc < min_carrying_cap: # if the carrying cap is less the minimum threshold
         r = 0
-    if norm_factor < 0.3:
+    if norm_factor < 0.4:
         r = 0
 
     if mode == 'best' or debug:
@@ -429,8 +429,8 @@ scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
 
 bg_keys = ['A12','B12','C12','D12','E12','F12','G12','H12']
 drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,'control']
-# folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
-folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
+folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
+# folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
 
 plate_paths = get_plate_paths(folder_path)
 
@@ -597,9 +597,9 @@ for key in gr_lib:
 
 fig3,ax3 = plt.subplots(figsize=(8,6))
 ax3.set_prop_cycle(cc)
+dc_fit = np.logspace(-3.5,4)
 
 for key in seascape_lib:
-    dc_fit = np.logspace(-3.5,4)
     
     ic50 = seascape_lib[key]['ic50']
     g_drugless = seascape_lib[key]['g_drugless']
@@ -619,6 +619,42 @@ ax3.spines['right'].set_visible(False)
 ax3.tick_params(axis='both', labelsize=12)
 ax3.legend(loc=(1,0),frameon=False)
 # ax3.tick_params(axis='both', which='minor', labelsize=8)
+
+#%%
+
+count = 0
+
+fig4,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(15,12))
+dc_fit = np.logspace(-3,4)
+
+dc_plot = [np.log10(d) for d in dc_fit]
+
+for key in seascape_lib:
+    row = int(np.floor(count/4))
+    col = int(np.mod(count,4))
+
+    ax = ax_list[row,col]
+
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
+    hc = seascape_lib[key]['hc']
+
+    g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
+
+    ax.plot(dc_plot,g_est)
+
+    gr_t = gr_lib[key]['avg'][0:-1]
+    gr_t = [gr*3600 for gr in gr_t]
+
+    ax.scatter(dc_log,gr_t)
+
+    ax.scatter(ic50,g_drugless/2,color='r',marker='*')
+
+    ax.set_title(key)
+
+    count+=1
+
+fig4.tight_layout()
 
 #%%
 fig.savefig('logistic_growth_fit.pdf')
