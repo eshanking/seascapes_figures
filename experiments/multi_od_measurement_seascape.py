@@ -429,8 +429,8 @@ scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
 
 bg_keys = ['A12','B12','C12','D12','E12','F12','G12','H12']
 drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,'control']
-# folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
-folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
+folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
+# folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
 
 plate_paths = get_plate_paths(folder_path)
 

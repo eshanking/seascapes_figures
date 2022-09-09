@@ -25,7 +25,7 @@ def rolling_regression(xdata,ydata):
     cc_est = np.mean(ydata[-2:])
 
     if cc_est < 0.3:
-        return 0
+        return 10**-6
     else:
         return np.max(r)
 
@@ -218,18 +218,17 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
 
     cc_est = np.mean(growth_curve[-2:])
 
-    if cc_est < 1:
-        return {'gr':0},None
-
-    bounds = ([10**-6,growth_curve[0]-0.1,cc_est-cc_est*0.1,0],
-              [10**-3,growth_curve[0]+0.1,cc_est+cc_est*0.1,max(t)])
+    gr_est = rolling_regression(t,growth_curve)
+    
+    bounds = ([gr_est-0.2*gr_est,growth_curve[0]-0.1,cc_est-cc_est*0.05,0],
+              [gr_est+0.2*gr_est,growth_curve[0]+0.1,cc_est+cc_est*0.05,max(t)])
 
     # p0 = [10**-3,growth_curve[0],cc_est] # starting parameters
 
     # popt, pcov = sciopt.curve_fit(logistic_growth_curve,
     #                                     t,growth_curve,p0=p0,sigma=sigma,
     #                                     bounds=bounds)
-    p0 = [10**-3,growth_curve[0],cc_est,1000]
+    p0 = [gr_est,growth_curve[0],cc_est,1000]
 
     popt,pcov = sciopt.curve_fit(logistic_growth_curve_v2,t,growth_curve,p0=p0,
                                  bounds=bounds)
@@ -244,7 +243,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
     cc = popt[carrying_cap_indx]*norm_factor
     l = popt[lamba_indx]
 
-    min_carrying_cap = 1
+    min_carrying_cap = 0.4
 
     if r < 0: # if the growth rate is negative
         r = 0
@@ -254,21 +253,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
         r = 0
     if norm_factor < 0.4:
         r = 0
-
-    # if mode == 'best' or debug:
-    #     est = [logistic_growth_curve(tt,popt[0],popt[1],popt[2]) for tt in t]
-
-
-
-    #     # est_linear = [linear_growth_curve(tt,r_lin,p0_lin) for tt in t]
-
-    #     # logistic_resid = np.linalg.norm(np.array(est)-np.array(growth_curve))
-    #     # linear_resid   = np.linalg.norm(np.array(est_linear)-np.array(growth_curve))
-
-    #     if mode == 'best' and (linear_resid < logistic_resid):
-            # r = r_lin*10
             
-
     d = {'gr':r,
         'OD_0':p0,
         'OD_max':cc}   
@@ -276,34 +261,20 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
     if debug:
         # if r > 0:
         fig,ax = plt.subplots()
-
-        ax.scatter(t,growth_curve)
+        t_plot = np.array(t)/3600
+        ax.scatter(t_plot,growth_curve)
 
         est = [logistic_growth_curve_v2(tt,popt[0],popt[1],popt[2],popt[3]) for tt in t]
-
-        # r_lin = popt_linear[0]
-        # p0_lin = popt_linear[1]
-
-        # est_linear = [linear_growth_curve(tt,r_lin,p0_lin) for tt in t]
-
-        # logistic_resid = np.linalg.norm(np.array(est)-np.array(growth_curve))
-        # linear_resid   = np.linalg.norm(np.array(est_linear)-np.array(growth_curve))
         
-        # if logistic_resid < linear_resid:
-        ax.plot(t,est,color='red')
-        # ax.plot(t,est_linear,color='black')
-        # print(popt[0])
+        ax.plot(t_plot,est,color='red')
+
         p0 = round(popt[1]*10**5)/10**5
         k = round(popt[2]*10**5)/10**5
         r_t = round(popt[0]*3600,2)
-        title = 'rate = ' + str(r_t) + ' K = ' + str(k) + ' p0 = ' + str(round(p0,2))
-        # else:
-        #     ax.plot(t,est_linear,color='green')
-        #     ax.plot(t,est,color='black')
-        #     r = round(r_lin*3600,2)
-        #     title = 'rate = ' + str(r)
+        title = 'rate = ' + str(round(3600*r,2)) + ' K = ' + str(k) + ' p0 = ' + str(round(p0,2))
+
         ax.set_title(title)
-        ax.set_xlabel('Time (s)')
+        ax.set_xlabel('Time (hr)')
         if normalize:
             ax.set_ylabel('Normalized OD')
         else:
@@ -454,7 +425,7 @@ def get_start_time(df,col=4):
     return dt
 
 #%%
-num_colors = 12
+# num_colors = 12
 # cm = cm.get_cmap('viridis',12)
 
 # cNorm  = colors.Normalize(vmin=0, vmax=num_colors-1)
@@ -462,8 +433,8 @@ num_colors = 12
 
 bg_keys = ['A12','B12','C12','D12','E12','F12','G12','H12']
 drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,'control']
-# folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
-folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
+folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
+# folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
 
 plate_paths = get_plate_paths(folder_path)
 
@@ -473,8 +444,8 @@ count = 0
 
 gr_lib = {}
 
-# for pp in plate_paths:
-for pp in [plate_paths[3]]:
+for pp in plate_paths:
+# for pp in [plate_paths[6]]:
 
     row = int(np.floor(count/4))
     col = int(np.mod(count,4))
@@ -550,9 +521,11 @@ for pp in [plate_paths[3]]:
 
             od_vect= np.array(od_vect)
 
-            od_vect = np.log(od_vect)
+            # od_vect = np.log(od_vect)
 
-            od_vect = od_vect - min(od_vect)
+            # od_vect = od_vect - np.min(od_vect)
+
+            timeseries_dict[key] = od_vect
 
             d,pcov = est_logistic_params(od_vect,t_vect,debug=False,mode='logistic',
                                          normalize=False)
@@ -620,7 +593,7 @@ for key in gr_lib:
     ax.plot(dc_plot,g_est)
     ax.scatter(ic50,g_drugless/2,color='r',marker='*')
     
-    ax.set_ylim(0,0.6)
+    ax.set_ylim(0,0.15)
 
     # plt.show()
     # xtl = ax.get_xticklabels()
