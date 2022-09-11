@@ -444,8 +444,10 @@ count = 0
 
 gr_lib = {}
 
+rate_est_lib = {}
+
 for pp in plate_paths:
-# for pp in [plate_paths[6]]:
+# for pp in [plate_paths[9]]:
 
     row = int(np.floor(count/4))
     col = int(np.mod(count,4))
@@ -492,55 +494,47 @@ for pp in plate_paths:
 
     data_avg = {}
     data_std = {}
-
-    # for t in range(len(data_paths0)):
-    #     for c in conditions:
-    #         d = []
-    #         for r in replicates:
-    #             key = r + c
-    #             od = timeseries_dict[key][t]
-    #             d.append(od)
-
-    #         if c in data_avg.keys():
-    #             data_avg[c].append(np.mean(d))
-    #             data_std[c].append(np.std(d))
-    #         else:
-    #             data_avg[c] = [np.mean(d)]
-    #             data_std[c] = [np.std(d)]
     
     gr_avg = []
     gr_std = []
+
+    rate_est_dict = {}
 
     for c in conditions:
         rate_est = []
         for r in replicates:
 
-            key = r+c
+            if not (count == 6 and (r == 'A' or r == 'H')):
 
-            od_vect = timeseries_dict[key]
+                key = r+c
 
-            od_vect= np.array(od_vect)
+                od_vect = timeseries_dict[key]
 
-            # od_vect = np.log(od_vect)
+                od_vect= np.array(od_vect)
 
-            # od_vect = od_vect - np.min(od_vect)
+                timeseries_dict[key] = od_vect
 
-            timeseries_dict[key] = od_vect
+                d,pcov = est_logistic_params(od_vect,t_vect,debug=False,mode='logistic',
+                                            normalize=False)
 
-            d,pcov = est_logistic_params(od_vect,t_vect,debug=False,mode='logistic',
-                                         normalize=False)
-
-            rate_est.append(d['gr'])
+                rate_est.append(d['gr'])
+            else:
+                key = r+c
+                del timeseries_dict[key]
             # r = rolling_regression(t_vect,od_vect)
             # rate_est.append(r)
 
+        rate_est_dict[c] = rate_est
+
         gr_avg.append(np.mean(rate_est))
         gr_std.append(np.std(rate_est))
+
 
     grl_t = {'avg':gr_avg,
              'err':gr_std}
     
     gr_lib[str(count)] = grl_t
+    rate_est_lib[str(count)] = rate_est_dict
 
     count+=1
 
@@ -654,6 +648,91 @@ ax3.legend(loc=(1,0),frameon=False)
 # ax3.tick_params(axis='both', which='minor', labelsize=8)
 
 #%%
+
+fig4,ax4 = plt.subplots(figsize=(6,6))
+ax4.set_prop_cycle(cc)
+
+for key in seascape_lib.keys():
+
+    # if key != '3':
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
+
+    ax4.scatter(ic50,g_drugless,marker='o',s=400,facecolor='w',edgecolors='b')
+    # ax4.annotate(key,(ic50-0.15,g_drugless-0.001),fontsize=12)
+    ax4.annotate(key,(ic50,g_drugless),fontsize=12,ha='center',va='center')
+
+ax4.set_ylim(0.06,0.115)
+ax4.set_xlim(-3,4)
+ax4.set_ylabel('Drug-free growth rate ($hr^{-1}$)',fontsize=14)
+ax4.set_xlabel('Log IC50 (ug/mL)',fontsize=14)
+ax4.tick_params(axis='both', labelsize=13)
+
+#%% Weinreich MIC comparison
+
+mic_list = [0.088,1.4,0.063,32,0.13,3.6*10**2,0.18,3.6*10**2,0.088,23,1.4,
+            3.6*10**2,1.4,2.1*10**3,0.8,2.9*10**3]
+
+mic_list = [np.log10(m) for m in mic_list]
+
+fig5,ax5 = plt.subplots(figsize=(5,5))
+count = 0
+
+for key in seascape_lib.keys():
+    ic50 = seascape_lib[key]['ic50']
+    mic = mic_list[count]
+    ax5.scatter(mic,ic50,marker='o',s=400,facecolor='w',edgecolors='b')
+    ax5.annotate(key,(mic,ic50),fontsize=12,ha='center',va='center')
+    count+=1
+
+ax5.set_xlabel('Weinreich MIC (log(ug/mL))',fontsize=14)
+ax5.set_ylabel('IC50 (log(ug/mL))',fontsize=14)
+
+yl = ax5.get_ylim()
+xl = ax5.get_xlim()
+
+lim = (max(yl[0],xl[0]),max(yl[1],xl[1]))
+ax5.set_xlim(lim)
+ax5.set_ylim(lim)
+
+ax5.plot(lim,lim,'--',color='black')
+
+ax5.tick_params(axis='both', labelsize=13)
+
+
+#%% Spot check plate 6
+
+fig7,ax_list = plt.subplots(3,4,figsize=(10,8))
+
+count = 0
+
+for c in conditions:
+    row = int(np.floor(count/4))
+    col = int(np.mod(count,4))
+    ax = ax_list[row,col]
+    for r in replicates:
+        key = r + c
+        od = timeseries_dict[key]
+        ax.plot(t_vect,od,label=r)
+    
+    ax.set_ylim(0,1)
+
+    if count == 11:
+        ax.set_title('Neg control')
+    else:
+        dc = drug_conc[count]
+
+        ax.set_title('Conc = ' + str(dc))
+
+    count+=1
+
+# ax_list[0][3].legend()
+fig7.tight_layout()
+
+#%%
 fig1.savefig('all_hill_fits.pdf',bbox_inches='tight')
 fig3.savefig('new_ecoli_seascape.pdf',bbox_inches='tight')
+fig4.savefig('gr_v_ic50.pdf',bbox_inches='tight')
+fig5.savefig('weinreich_MIC_comparison.pdf',bbox_inches='tight')
+# fig7.savefig('spot_check_plate_9.pdf')
 # %%
