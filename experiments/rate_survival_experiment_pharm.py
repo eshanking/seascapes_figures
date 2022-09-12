@@ -6,13 +6,14 @@ def make_data(death_rate=None,
               n_sims=None,
               carrying_cap=None,
               debug=False,
+              plot=False,
               population_template=None,
+              timestep_scale=1,
               slopes=None):
 
 
    np.random.seed(2021)
 
-   #  max_doses = [100]
    max_doses = [100]
    curve_types = ['pharm']
    experiment_type = 'rate-survival'
@@ -21,12 +22,6 @@ def make_data(death_rate=None,
       n_sims = 1
    #  n_sims = 1
 
-   # slopes = np.array([0.4,0.5,0.6,0.7])*10**-3
-
-   # slopes = np.array([0.4])*10**-3
-
-   #  slopes = np.array([0.5,1,2,4])*10**-4
-
    if death_rate is None:
       death_rate = 0.0144
    if mut_rate is None:
@@ -34,47 +29,39 @@ def make_data(death_rate=None,
    if carrying_cap is None:
       carrying_cap = 10**11
    if slopes is None:
-      slopes = np.array([2,2.5,3,3.5])*10**-4
+      slopes = np.array([12,16,20,24])*10**-3
 
    init_counts = np.zeros(16)
    init_counts[0] = 10**10
     
-   options = {'doubling_time':1,
-            # 'death_rate':0.0144,
+   options = {'doubling_time':.1,
             'death_rate':death_rate,
-         #    'mut_rate':10**-9,
             'mut_rate':mut_rate,
-            # 'mut_rate':10**-3,
             'use_carrying_cap':True,
             'carrying_cap':carrying_cap,
-            'n_timestep':2000,
+            'n_timestep':300,
             'init_counts':init_counts,
-            # 'k_abs':0.95,
-            # 'k_elim':0.00839,
             'k_elim':0,
-         #    'max_dose':100,
-            'dose_schedule':24,
+            # 'dose_schedule':24,
             'pad_right':False,
-            'timestep_scale':3,
-            'plot':False,
-         #    'ic50_data':'pyrimethamine_ic50.csv',
-            'fitness_data':'estimate',
+            'timestep_scale':timestep_scale,
+            'plot':plot,
+            'fitness_data':'from_file',
+            'seascape_path':'results/seascape_library.xlsx',
             'null_seascape':False,
             'debug':False
-            # 'null_seascape_dose':1
-            # 'null_seascape_method':'sort'
             }
-
 
    e = Experiment(max_doses=max_doses,
                   slopes=slopes,
                   curve_types = curve_types,
                   experiment_type = experiment_type,
                   n_sims=n_sims,
-                  passage = False,
-                  passage_time = 96,
+                  passage = True,
+                  passage_time = 24,
                   population_options=options,
                   population_template=population_template,
+                  results_folder='results',
                   debug=debug)
 
 
@@ -82,5 +69,5 @@ def make_data(death_rate=None,
 
    return e
 
-if __name__ == '__main__':
-    make_data()
+# if __name__ == '__main__':
+#     make_data()

@@ -1,11 +1,12 @@
 import os
+from turtle import title
 import matplotlib.pyplot as plt
 import numpy as np
-from fears.utils import results_manager, dir_manager, stats
+from fears.utils import results_manager, dir_manager, stats, plotter
 import pandas as pd
 import pickle
 
-def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[14,15]):
+def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[1,2]):
 
     if roc_exp is None:
         roc_exp = pickle.load(open(exp_info_path,'rb'))
@@ -25,8 +26,14 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[14,15
     km_data = stats.km_curve(exp=roc_exp,resistance_outcome=resistance_outcome)
     tmax = int(pop.n_timestep)
 
-    key1 = 'resistance ' + pop.int_to_binary(resistance_outcome[0])
-    key2 = 'resistance ' + pop.int_to_binary(resistance_outcome[1])
+    if type(resistance_outcome[0]) == list:
+        key1 = 'resistance' + str(resistance_outcome[0])
+    else:
+        key1 = 'resistance ' + pop.int_to_binary(resistance_outcome[0])
+    if type(resistance_outcome[1]) == list:
+        key2 = 'resistance' + str(resistance_outcome[1])
+    else:
+        key2 = 'resistance ' + pop.int_to_binary(resistance_outcome[1])
 
     for k_abs in km_data.keys():
         
@@ -37,21 +44,21 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[14,15
         gen2_resistance_times = exp_dict[key2]
 
 
-        ax[0] = pop.plot_kaplan_meier(death_event_times,
+        ax[0] = plotter.plot_kaplan_meier(pop,death_event_times,
                                           ax=ax[0],
                                           n_sims=n_sims,
                                           label=k_abs,
                                           mode='survival',
                                           t_max=tmax)
         
-        ax[1] = pop.plot_kaplan_meier(gen1_resistance_times,
+        ax[1] = plotter.plot_kaplan_meier(pop,gen1_resistance_times,
                                           ax=ax[1],
                                           n_sims=n_sims,
                                           label=k_abs,
                                           mode='resistant',
                                           t_max=tmax)
         
-        ax[2] = pop.plot_kaplan_meier(gen2_resistance_times,
+        ax[2] = plotter.plot_kaplan_meier(pop,gen2_resistance_times,
                                           ax=ax[2],
                                           n_sims=n_sims,
                                         #   label=f"{k_abs_t:.1e}",
@@ -80,10 +87,12 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[14,15
     ax[2].set_position(pos2)
     
     ax[0].set_title('Survival of infectious agent',fontsize=8)
-    title_t = 'Resistant genotype = ' + pop.int_to_binary(resistance_outcome[0])
+
+    # title_t = 'Resistant genotype = ' + pop.int_to_binary(resistance_outcome[0])
+    title_t = 'Single mutant'
     ax[1].set_title(title_t,fontsize=8)
 
-    title_t = 'Resistant genotype = ' + pop.int_to_binary(resistance_outcome[1])
+    title_t = 'Double mutant'
     ax[2].set_title(title_t,fontsize=8)
     
     # max sure all x lims are the same
@@ -97,10 +106,11 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[14,15
     for a in ax:
         a.set_ylim([-10,110])
         # a.set_xlim([0,xmax])
-        a = pop.x_ticks_to_days(a)
+        a = plotter.x_ticks_to_days(pop,a)
 
     if save:
-        results_manager.save_fig(fig,'roc_km_curve.pdf',bbox_inches='tight')
+        # results_manager.save_fig(fig,'roc_km_curve.pdf',bbox_inches='tight')
+        fig.savefig('figures/roc_km_curve.pdf',bbox_inches='tight')
 
     return fig,ax
     #%%

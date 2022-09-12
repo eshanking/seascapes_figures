@@ -11,6 +11,7 @@ import scipy.optimize as sciopt
 import scipy.interpolate as sciinter
 import re
 from fears.utils import plotter
+from pathlib import Path
 
 def rolling_regression(xdata,ydata):
 
@@ -433,8 +434,8 @@ def get_start_time(df,col=4):
 
 bg_keys = ['A12','B12','C12','D12','E12','F12','G12','H12']
 drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,'control']
-folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
-# folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
+# folder_path = '/Users/eshanking/repos/seascapes_figures/data/08312022'
+folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
 
 plate_paths = get_plate_paths(folder_path)
 
@@ -445,6 +446,8 @@ count = 0
 gr_lib = {}
 
 rate_est_lib = {}
+
+all_timeseries = {}
 
 for pp in plate_paths:
 # for pp in [plate_paths[9]]:
@@ -535,6 +538,8 @@ for pp in plate_paths:
     
     gr_lib[str(count)] = grl_t
     rate_est_lib[str(count)] = rate_est_dict
+
+    all_timeseries[str(count)] = timeseries_dict
 
     count+=1
 
@@ -702,37 +707,41 @@ ax5.tick_params(axis='both', labelsize=13)
 
 #%% Spot check plate 6
 
-fig7,ax_list = plt.subplots(3,4,figsize=(10,8))
+# fig7,ax_list = plt.subplots(3,4,figsize=(10,8))
 
-count = 0
+# count = 0
 
-for c in conditions:
-    row = int(np.floor(count/4))
-    col = int(np.mod(count,4))
-    ax = ax_list[row,col]
-    for r in replicates:
-        key = r + c
-        od = timeseries_dict[key]
-        ax.plot(t_vect,od,label=r)
+# for c in conditions:
+#     row = int(np.floor(count/4))
+#     col = int(np.mod(count,4))
+#     ax = ax_list[row,col]
+#     for r in replicates:
+#         key = r + c
+#         od = timeseries_dict[key]
+#         ax.plot(t_vect,od,label=r)
     
-    ax.set_ylim(0,1)
+#     ax.set_ylim(0,1)
 
-    if count == 11:
-        ax.set_title('Neg control')
-    else:
-        dc = drug_conc[count]
+#     if count == 11:
+#         ax.set_title('Neg control')
+#     else:
+#         dc = drug_conc[count]
 
-        ax.set_title('Conc = ' + str(dc))
+#         ax.set_title('Conc = ' + str(dc))
 
-    count+=1
+#     count+=1
 
-# ax_list[0][3].legend()
-fig7.tight_layout()
+# # ax_list[0][3].legend()
+# fig7.tight_layout()
 
 #%%
-fig1.savefig('all_hill_fits.pdf',bbox_inches='tight')
-fig3.savefig('new_ecoli_seascape.pdf',bbox_inches='tight')
-fig4.savefig('gr_v_ic50.pdf',bbox_inches='tight')
-fig5.savefig('weinreich_MIC_comparison.pdf',bbox_inches='tight')
+fig1.savefig('figures/all_hill_fits.pdf',bbox_inches='tight')
+fig3.savefig('figures/new_ecoli_seascape.pdf',bbox_inches='tight')
+fig4.savefig('figures/gr_v_ic50.pdf',bbox_inches='tight')
+fig5.savefig('figures/weinreich_MIC_comparison.pdf',bbox_inches='tight')
+
+df = pd.DataFrame(seascape_lib)
+df.to_excel('results/seascape_library.xlsx')
 # fig7.savefig('spot_check_plate_9.pdf')
+
 # %%
