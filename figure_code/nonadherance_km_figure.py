@@ -1,12 +1,12 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from fears.utils import results_manager
+from fears.utils import results_manager, stats, plotter
 import pandas as pd
 import pickle
 
 
-def make_fig(adh_exp=None,exp_info_path=None):
+def make_fig(adh_exp=None,exp_info_path=None,resistance_outcome=[[1,2,4,8],[3,5,6,9,10,12]]):
     # suffix = '11182021_0001' # lab machine
     # suffix = '11112021_0000' # macbook
     
@@ -28,8 +28,6 @@ def make_fig(adh_exp=None,exp_info_path=None):
     #     exp_folders,exp_info = results_manager.get_experiment_results(suffix=suffix)
     exp_folders,exp_info = results_manager.get_experiment_results(exp=adh_exp)
 
-    max_cells = exp_info.populations[0].max_cells
-    n_timestep = exp_info.population_options['n_timestep']
     n_sims = exp_info.n_sims
     p_drop = exp_info.prob_drops
     
@@ -37,87 +35,57 @@ def make_fig(adh_exp=None,exp_info_path=None):
     p_drop = np.flip(p_drop)
     
     pop = exp_info.populations[0]
-    
-    km_data = {'survival':{},
-               'resistance 0010':{},
-               'resistance 0110':{}}
+    tmax = int(pop.n_timestep)
+
+    km_data = stats.km_curve(exp=adh_exp,resistance_outcome=resistance_outcome)
+
     #%%
 
+    if type(resistance_outcome[0]) == list:
+        key1 = 'resistance' + str(resistance_outcome[0])
+    else:
+        key1 = 'resistance ' + pop.int_to_binary(resistance_outcome[0])
+    if type(resistance_outcome[1]) == list:
+        key2 = 'resistance' + str(resistance_outcome[1])
+    else:
+        key2 = 'resistance ' + pop.int_to_binary(resistance_outcome[1])
 
-    for exp in exp_folders:
+    for k_abs in km_data.keys():
         
-        p_drop_t = exp[exp.find('=')+1:]
-        p_drop_t = p_drop_t.replace(',','.')
-        p_drop_t = float(p_drop_t)
-        
-        num = np.argwhere(p_drop == p_drop_t)
-        num = num[0,0]
-        
-        sim_files = os.listdir(path=exp)
-        sim_files = sorted(sim_files)
-        
-        # KM data 
-        death_event_obs = np.zeros(n_sims)
-        death_event_times = np.zeros(n_sims)
-        
-        # time to genotype 2
-        gen2_resistance_obs = np.zeros(n_sims)
-        gen2_resistance_times = np.zeros(n_sims)
-        
-        # time to genotype 6
-        gen7_resistance_obs = np.zeros(n_sims)
-        gen7_resistance_times = np.zeros(n_sims)
-        
-        k=0
+        exp_dict = km_data[k_abs]
 
-        while k < len(sim_files):
-        # while k < 10:
-            sim = sim_files[k]
-            sim = exp + os.sep + sim
-            data_dict = results_manager.get_data(sim)
-            data = data_dict['counts']
-            
-            death_event_obs[k],death_event_times[k] = \
-                exp_info.extinction_time(pop,data,thresh=1)
-                
-            gen7_resistance_obs[k],gen7_resistance_times[k] = \
-                exp_info.resistance_time(pop,data,7,thresh=.1)
-    
-            gen2_resistance_obs[k],gen2_resistance_times[k] = \
-                exp_info.resistance_time(pop,data,2,thresh=.1)
-                
-            k+=1
+        death_event_times = exp_dict['survival']
+        gen1_resistance_times = exp_dict[key1]
+        gen2_resistance_times = exp_dict[key2]
 
-        
-        ax[0] = pop.plot_kaplan_meier(death_event_times,
+
+        ax[0] = plotter.plot_kaplan_meier(pop,death_event_times,
                                           ax=ax[0],
                                           n_sims=n_sims,
-                                          label=str(p_drop_t),
-                                          mode='survival')
-
-        ax[1] = pop.plot_kaplan_meier(gen2_resistance_times,
+                                          label=k_abs,
+                                          mode='survival',
+                                          t_max=tmax)
+        
+        ax[1] = plotter.plot_kaplan_meier(pop,gen1_resistance_times,
                                           ax=ax[1],
                                           n_sims=n_sims,
-                                          label=str(p_drop_t),
-                                          mode='resistant')
+                                          label=k_abs,
+                                          mode='resistant',
+                                          t_max=tmax)
         
-        ax[2] = pop.plot_kaplan_meier(gen7_resistance_times,
+        ax[2] = plotter.plot_kaplan_meier(pop,gen2_resistance_times,
                                           ax=ax[2],
                                           n_sims=n_sims,
-                                          label=str(p_drop_t),
-                                          mode='resistant')
-        
-        # ax[0].set_yscale('log')
-
-        km_data['survival'][str(p_drop_t)] = death_event_times
-        km_data['resistance 0010'][str(p_drop_t)] = gen2_resistance_times
-        km_data['resistance 0110'][str(p_drop_t)] = gen7_resistance_times
+                                        #   label=f"{k_abs_t:.1e}",
+                                          label = k_abs,
+                                          mode='resistant',
+                                          t_max=tmax)
             
     
     for a in ax:
         a.spines["right"].set_visible(False)
         a.spines["top"].set_visible(False)
-        a = pop.x_ticks_to_days(a)
+        a = plotter.x_ticks_to_days(pop,a)
         a.set_xlabel('Days')
         
     ax[2].legend(frameon=False,loc=[1.1,.3],title='$p_{forget}$',fontsize=8,ncol=1)
@@ -136,11 +104,21 @@ def make_fig(adh_exp=None,exp_info_path=None):
     ax[2].set_position(pos2)
     
     ax[0].set_title('Survival of infectious agent',fontsize=8)
-    ax[1].set_title('Resistant genotype = 0010',fontsize=8)
-    ax[2].set_title('Resistant genotype = 0111',fontsize=8)
-    results_manager.save_fig(fig,'nonadherance_km_curve.pdf',bbox_inches='tight')
+    ax[1].set_title('Single mutant',fontsize=8)
+    ax[2].set_title('Double mutant',fontsize=8)
 
-    return
+    # add vertical line to each axis
+
+    x = np.ones(100)*21*24/pop.timestep_scale
+    y = np.arange(100)    
+
+    for a in ax:
+        a.plot(x,y,'--',color='black',linewidth=2)
+
+    # results_manager.save_fig(fig,'nonadherance_km_curve.pdf',bbox_inches='tight')
+    fig.savefig('figures/adh_roc_curve.pdf',bbox_inches='tight')
+
+    return km_data
 
 #%%  perform pairwise log-rank tests and compute p values
 

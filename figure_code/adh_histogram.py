@@ -25,8 +25,16 @@ def make_fig(exp=None,exp_info_path=None):
 
     pop = exp_info.populations[0]
 
-    gap = int(pop.dose_schedule/pop.timestep_scale)
-    n_scheduled_doses = int(np.ceil(pop.n_timestep/gap))
+    gap = int(pop.dose_schedule/pop.timestep_scale)     
+    if pop.dwell:
+        dwell_doses = int(np.floor(pop.dwell_time/gap))
+    else:
+        dwell_doses = 0
+
+    n_scheduled_doses = int(np.floor(pop.n_timestep/gap))-dwell_doses
+
+    max_doses = int(np.sum(pop.impulses))
+
 
     extinct_sched = np.zeros(n_scheduled_doses)
     extinct_sched = np.array([extinct_sched])
@@ -36,6 +44,7 @@ def make_fig(exp=None,exp_info_path=None):
     # k=0
 
     for exp in [exp_folders[2]]:
+    # for exp in exp_folders:
 
         sim_files = os.listdir(path=exp)
         sim_files = sorted(sim_files)
@@ -57,7 +66,9 @@ def make_fig(exp=None,exp_info_path=None):
             # dc = data_dict['drug_curve']
             regimen = data_dict['regimen']
             dose_schedule = compute_doses(regimen,pop)
+            dose_schedule = dose_schedule[dwell_doses:]
             dose_schedule = np.array([dose_schedule])
+            # dose_schedule = dose_schedule[dwell_doses:]
 
             if counts[-1]<1:
                 extinct_sched = np.concatenate((extinct_sched,dose_schedule),axis=0)
@@ -72,7 +83,7 @@ def make_fig(exp=None,exp_info_path=None):
     fig,ax = plt.subplots(figsize=(4,3))
     cmap = mpl.colors.ListedColormap(['cornflowerblue','w'])
 
-    aspect = n_scheduled_doses/n_sims
+    # aspect = n_scheduled_doses/n_sims
     # aspect_surv = n_scheduled_doses/survived_sched.shape[0]
 
     # ax[0].imshow(extinct_sched,cmap=cmap)
@@ -86,12 +97,13 @@ def make_fig(exp=None,exp_info_path=None):
     extinct_hist = np.sum(extinct_sched,axis=0)
     extinct_hist = extinct_hist/n_extinct
 
-    dose_num = np.arange(len(survived_hist))
+    dose_num = np.arange(len(survived_hist)) + 1
     # p = (1-float(p_drop_t))*np.ones(len(dose_num))
 
     ratio = np.divide(extinct_hist,survived_hist)
 
-    ax.bar(dose_num,ratio,width=1,color='red',alpha=0.6,label='Resistant')
+    ax.bar(dose_num,ratio,width=1,color='red',alpha=0.6,edgecolor='w',
+        align='edge')
     ax.plot(dose_num,np.ones(len(dose_num)),'--',color='black')
  
     ax.spines["right"].set_visible(False)
@@ -103,8 +115,10 @@ def make_fig(exp=None,exp_info_path=None):
     ax.tick_params(axis='x', labelsize=12)
     ax.tick_params(axis='y', labelsize=12)
 
-    results_manager.save_fig(fig,'dose_ratio_barplot.pdf',bbox_inches='tight')
-    return p_drop_t
+    ax.set_xlim(1,max_doses+1)
+
+    fig.savefig('figures/dose_ratio_barplot.pdf',bbox_inches='tight')
+    return survived_sched,extinct_sched
 
 
 

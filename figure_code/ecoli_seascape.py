@@ -1,41 +1,44 @@
 from fears.population import Population
-from fears.utils import results_manager
+from fears.utils import plotter
 import matplotlib.pyplot as plt
 import numpy as np
 
-p = Population(fitness_data='estimate')
+p = Population(fitness_data='from_file',seascape_path='results/seascape_library.xlsx')
 
-fig,ax = plt.subplots(figsize=(6,3))
+fig,ax = plt.subplots(figsize=(10,5))
 
-fig,ax = p.plot_fitness_curves()
+fig,ax = p.plot_fitness_curves(fig=fig,ax=ax,legend_cols=2);
 
 vert_lines_ydata = np.arange(9)/10
 vert_lines_kwargs = {'linewidth':3,'alpha':0.7}
 
 width = 2.5
 
-ax,lax = p.add_landscape_to_fitness_curve(1,ax,
+ax,lax = plotter.add_landscape_to_fitness_curve(10**0,ax,p,
                                           width=width,
-                                          height=0.7,
-                                          pad=-.25,
+                                          height=0.1,
+                                          pad=0,
+                                          ypos=0.11,
                                           colorbar=False,
                                           vert_lines_ydata=vert_lines_ydata,
                                           vert_lines_kwargs=vert_lines_kwargs)
 
-ax,lax = p.add_landscape_to_fitness_curve(10**-2,ax,
+ax,lax = plotter.add_landscape_to_fitness_curve(10**-2.5,ax,p,
                                           width=width,
-                                          height=0.7,
-                                          pad=-.25,
+                                          height=0.1,
+                                          pad=0,
+                                          ypos=0.11,
                                           colorbar=False,
                                           vert_lines_ydata=vert_lines_ydata,
                                           vert_lines_kwargs=vert_lines_kwargs)
 
-ax,lax = p.add_landscape_to_fitness_curve(10**2,ax,
+ax,lax = plotter.add_landscape_to_fitness_curve(10**2.5,ax,p,
                                           width=width,
-                                          height=0.7,
-                                          pad=-.25,
+                                          height=0.1,
+                                          pad=0,
+                                          ypos=0.11,
                                           colorbar=True,
-                                          cbloc = [0.55,0.25,1,0.4],
+                                          cbloc = [0.7,0.25,1,0.5],
                                           vert_lines_ydata=vert_lines_ydata,
                                           vert_lines_kwargs=vert_lines_kwargs)
 
@@ -45,5 +48,8 @@ ax.spines["right"].set_visible(False)
 ax.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=20)
 ax.set_xlabel('Drug concentration (μg/mL)',fontsize=20)
 
+ax.set_ylim(0,0.12)
 ax.set_xlim([10**-2.7,10**3])
-results_manager.save_fig(fig,'ecoli_seascape_with_landscapes.pdf')
+
+fig.savefig('figures/seascape_with_landscapes.pdf',bbox_inches='tight')
+# results_manager.save_fig(fig,'ecoli_seascape_with_landscapes.pdf')
