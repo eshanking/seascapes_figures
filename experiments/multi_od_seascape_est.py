@@ -11,6 +11,7 @@ import scipy.optimize as sciopt
 import scipy.interpolate as sciinter
 import re
 from fears.utils import plotter
+import fears.utils.AutoRate as ar
 from pathlib import Path
 
 def rolling_regression(xdata,ydata):
@@ -68,7 +69,7 @@ def logistic_growth_curve(t,r,p0,k):
 
     return p
 
-def logistic_growth_curve_v2(t,r,p0,k,l):
+def logistic_growth_with_lag(t,r,p0,k,l):
 
     p = p0 + k/(1+ np.exp((4*r*(l-t)/k) + 2))
 
@@ -231,7 +232,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
     #                                     bounds=bounds)
     p0 = [gr_est,growth_curve[0],cc_est,1000]
 
-    popt,pcov = sciopt.curve_fit(logistic_growth_curve_v2,t,growth_curve,p0=p0,
+    popt,pcov = sciopt.curve_fit(logistic_growth_with_lag,t,growth_curve,p0=p0,
                                  bounds=bounds)
     
     rate_indx = 0 # index of the optimized data points referring to the growth rate
@@ -265,7 +266,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
         t_plot = np.array(t)/3600
         ax.scatter(t_plot,growth_curve)
 
-        est = [logistic_growth_curve_v2(tt,popt[0],popt[1],popt[2],popt[3]) for tt in t]
+        est = [logistic_growth_with_lag(tt,popt[0],popt[1],popt[2],popt[3]) for tt in t]
         
         ax.plot(t_plot,est,color='red')
 
@@ -424,6 +425,14 @@ def get_start_time(df,col=4):
 
 
     return dt
+
+#%% Drug free growth
+os.chdir('/Users/kinge2/repos/seascapes_figures/')
+plate = ar.Plate('data/drug_free_growth/drug_free_growth.xlsx',
+                 exp_layout_path='data/drug_free_growth/09192022_plate_layout.xlsx')
+
+
+
 
 #%%
 # num_colors = 12
