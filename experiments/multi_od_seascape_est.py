@@ -427,7 +427,8 @@ def get_start_time(df,col=4):
     return dt
 
 #%% Drug free growth
-os.chdir('/Users/kinge2/repos/seascapes_figures/')
+# os.chdir('/Users/kinge2/repos/seascapes_figures/')
+os.chdir('/Users/eshanking/repos/seascapes_figures/')
 plate = ar.Plate('data/drug_free_growth/drug_free_growth.xlsx',
                  exp_layout_path='data/drug_free_growth/09192022_plate_layout.xlsx')
 
@@ -752,3 +753,51 @@ fig5.savefig('figures/weinreich_MIC_comparison.pdf',bbox_inches='tight')
 df = pd.DataFrame(seascape_lib)
 df.to_excel('results/seascape_library.xlsx')
 # fig7.savefig('spot_check_plate_9.pdf')
+#%%
+g_drugless = {'0': 0.3318887453542961,
+                '1': 0.3289292896469517,
+                '2': 0.31948618595999434,
+                '3': 0.32185083539925147,
+                '4': 0.3212835332399497,
+                '5': 0.3281459659304418,
+                '6': 0.3220102172565344,
+                '7': 0.329715666905591,
+                '8': 0.32235137224647364,
+                '9': 0.3356938306834784,
+                '10': 0.32721470140468945,
+                '11': 0.32869021659670783,
+                '12': 0.32194445877945627,
+                '13': 0.329366209455696,
+                '14': 0.327114087967487,
+                '15': 0.32425708344443227}
+
+old_drugless = {}
+
+for key in seascape_lib.keys():
+    old_drugless[key] = seascape_lib[key]['g_drugless']
+    seascape_lib[key]['g_drugless'] = g_drugless[key]
+
+fig6,ax6 = plt.subplots(figsize=(10,6))
+ax6.set_prop_cycle(cc)
+dc_fit = np.logspace(-3.5,4,num=100)
+
+for key in seascape_lib:
+    
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
+    hc = seascape_lib[key]['hc']
+
+    g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
+
+    ax6.plot(dc_fit,g_est,linewidth=2,label=int(key))
+
+ax6.set_xscale('log')
+
+ax6.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=15)
+ax6.set_xlabel('Drug Concentration (ug/mL)',fontsize=15)
+ax6.spines['top'].set_visible(False)
+ax6.spines['right'].set_visible(False)
+
+ax6.tick_params(axis='both', labelsize=12)
+ax6.legend(loc=(1,0),frameon=False)
+# %%
