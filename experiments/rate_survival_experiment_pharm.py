@@ -9,14 +9,14 @@ def make_data(death_rate=None,
               plot=False,
               population_template=None,
               timestep_scale=1,
-              slopes=None):
+              slopes=None,
+              experiment_type = 'rate-survival'):
 
 
    np.random.seed(2021)
 
    max_doses = [100]
    curve_types = ['pharm']
-   experiment_type = 'rate-survival'
       
    if n_sims is None:
       n_sims = 1
