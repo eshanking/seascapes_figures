@@ -1,4 +1,4 @@
-# Name of paper
+# Fitness seascapes facilitate the prediction of therapeutic resistance under time-varying selection
 Reproduce figures from paper
 Steps to reproduce figures: 
 
@@ -7,4 +7,4 @@ Steps to reproduce figures:
 3. Open and run desired experiment file (experiments/experiment_file.py)
 4. Open figure_code and run desired figure function (make_fig) with experiment info path as the path to the relevant     
    experiment info file (found in the results folder)
-5. Figures are saved to the figure folder.
+5. Figures are saved to the figures folder.

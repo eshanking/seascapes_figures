@@ -128,7 +128,7 @@ def find_survived(exp_folders,n_sims):
 
 
 # def make_figure(roc_exp,adh_exp):
-def make_figure(roc_info_path,adh_info_path):
+def make_fig(roc_exp=None,adh_exp=None,roc_info_path=None,adh_info_path=None):
     
     fig,ax = plt.subplots(nrows=3,ncols=4,figsize=(6,4))
     labelsize = 10
@@ -138,8 +138,9 @@ def make_figure(roc_info_path,adh_info_path):
     # data_folder = 'results_' + suffix
     # exp_info_file = 'experiment_info_' + suffix + '.p'
     
-    roc_exp = load_exp_info(roc_info_path)
-    adh_exp = load_exp_info(adh_info_path)
+    if (roc_exp is None) or (adh_exp is None):
+        roc_exp = load_exp_info(roc_info_path)
+        adh_exp = load_exp_info(adh_info_path)
 
     # data_folder = roc_exp.results_path
     # exp_info_file = roc_exp.experiment_info_path
