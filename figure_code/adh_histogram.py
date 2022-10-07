@@ -5,6 +5,7 @@ import matplotlib as mpl
 import numpy as np
 from fears.utils import results_manager
 import pickle
+from scipy import stats
 
 def make_fig(exp=None,exp_info_path=None):
 
@@ -35,17 +36,19 @@ def make_fig(exp=None,exp_info_path=None):
 
     max_doses = int(np.sum(pop.impulses))
 
-
-    extinct_sched = np.zeros(n_scheduled_doses)
-    extinct_sched = np.array([extinct_sched])
-    survived_sched = np.zeros(n_scheduled_doses)
-    survived_sched = np.array([survived_sched])
+    n_subplots = len(exp_folders)-1
+    fig,ax_list = plt.subplots(ncols=n_subplots,figsize=(10,3))
 
     # k=0
 
-    for exp in [exp_folders[2]]:
-    # for exp in exp_folders:
-
+    # for exp in [exp_folders[2]]:
+    num = 0
+    for exp in exp_folders[:-1]:
+        ax = ax_list[num]
+        extinct_sched = np.zeros(n_scheduled_doses)
+        extinct_sched = np.array([extinct_sched])
+        survived_sched = np.zeros(n_scheduled_doses)
+        survived_sched = np.array([survived_sched])
         sim_files = os.listdir(path=exp)
         sim_files = sorted(sim_files)
 
@@ -76,47 +79,85 @@ def make_fig(exp=None,exp_info_path=None):
                 survived_sched = np.concatenate((survived_sched,dose_schedule),axis=0)
             k+=1
 
-    extinct_sched = extinct_sched[1:,:]
-    survived_sched = survived_sched[1:,:]
+        extinct_sched = extinct_sched[1:,:]
+        survived_sched = survived_sched[1:,:]
 
-    # fig,ax = plt.subplots(2,1,figsize=(6.25,7.75),sharex=True)
-    fig,ax = plt.subplots(figsize=(4,3))
-    cmap = mpl.colors.ListedColormap(['cornflowerblue','w'])
+        # fig,ax = plt.subplots(2,1,figsize=(6.25,7.75),sharex=True)
+        # fig,ax = plt.subplots(figsize=(4,3))
+        cmap = mpl.colors.ListedColormap(['cornflowerblue','w'])
 
-    # aspect = n_scheduled_doses/n_sims
-    # aspect_surv = n_scheduled_doses/survived_sched.shape[0]
+        # aspect = n_scheduled_doses/n_sims
+        # aspect_surv = n_scheduled_doses/survived_sched.shape[0]
 
-    # ax[0].imshow(extinct_sched,cmap=cmap)
-    # ax[1].imshow(survived_sched,cmap=cmap)
+        # ax[0].imshow(extinct_sched,cmap=cmap)
+        # ax[1].imshow(survived_sched,cmap=cmap)
 
-    n_extinct = extinct_sched.shape[0]
-    n_survived = survived_sched.shape[0]
+        n_extinct = extinct_sched.shape[0]
+        n_survived = survived_sched.shape[0]
 
-    survived_hist = np.sum(survived_sched,axis=0)
-    survived_hist = survived_hist/n_survived
-    extinct_hist = np.sum(extinct_sched,axis=0)
-    extinct_hist = extinct_hist/n_extinct
+        survived_hist = np.sum(survived_sched,axis=0)
+        sh_counts = survived_hist
+        survived_hist = survived_hist/n_survived
+        extinct_hist = np.sum(extinct_sched,axis=0)
+        ext_counts = extinct_hist
+        extinct_hist = extinct_hist/n_extinct
 
-    dose_num = np.arange(len(survived_hist)) + 1
-    # p = (1-float(p_drop_t))*np.ones(len(dose_num))
+        dose_num = np.arange(len(survived_hist)) + 1
+        # p = (1-float(p_drop_t))*np.ones(len(dose_num))
 
-    ratio = np.divide(extinct_hist,survived_hist)
+        ratio = np.divide(extinct_hist,survived_hist)
 
-    ax.bar(dose_num,ratio,width=1,color='red',alpha=0.6,edgecolor='w',
-        align='edge')
-    ax.plot(dose_num,np.ones(len(dose_num)),'--',color='black')
- 
-    ax.spines["right"].set_visible(False)
-    ax.spines["top"].set_visible(False)
+        ax.bar(dose_num,ratio,width=1,color='red',alpha=0.6,edgecolor='w',
+            align='edge')
+        ax.plot(dose_num,np.ones(len(dose_num)),'--',color='black')
+    
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
 
-    ax.set_ylabel('Odds',fontsize=12)
-    ax.set_xlabel('Scheduled dose',fontsize=12)
+        ax.set_ylabel('Odds (success/failure)',fontsize=12)
+        ax.set_xlabel('Scheduled dose',fontsize=12)
 
-    ax.tick_params(axis='x', labelsize=12)
-    ax.tick_params(axis='y', labelsize=12)
+        ax.tick_params(axis='x', labelsize=12)
+        ax.tick_params(axis='y', labelsize=12)
 
-    ax.set_xlim(1,max_doses+1)
+        ax.set_xlim(1,max_doses+1)
+        ax.set_ylim(0,3.5)
 
+        ax.set_title('$p_{forget} = $' + str(p_drop_t))
+
+        ax.text(x=3,y=0.3,s='$n_{success} = $' + str(n_extinct),
+                backgroundcolor='gray',color='w')
+
+        # Statistical analysis
+
+        # res = []
+
+        # sig_level = 0.05/max_doses # bonferroni correction
+
+        # for i in range(len(ext_counts)):
+        #     ext_taken = ext_counts[i]
+        #     ext_not_taken = n_extinct-ext_taken
+
+        #     surv_taken = sh_counts[i]
+        #     surv_not_taken = n_survived-surv_taken
+
+        #     if surv_taken + ext_taken > 0:
+        #         obs = np.array([[ext_taken,ext_not_taken],[surv_taken,surv_not_taken]])
+                
+        #         zeros = np.argwhere(obs==0)
+
+        #         if not (zeros.shape[0]>0):
+
+        #             p = stats.chi2_contingency(obs)[1]
+
+        #             res.append(p)
+
+        #             if p < sig_level:
+        #                 ax.text(dose_num[i]+0.1,ratio[i],'*',fontsize='15')
+
+        num+=1
+
+    fig.tight_layout()
     fig.savefig('figures/dose_ratio_barplot.pdf',bbox_inches='tight')
     return survived_sched,extinct_sched
 

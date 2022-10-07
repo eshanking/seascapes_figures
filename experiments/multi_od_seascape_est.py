@@ -5,15 +5,15 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
-import matplotlib.colors as colors
-import matplotlib.cm as mplcm
+from matplotlib import colors
+# import matplotlib.cm as mplcm
 import scipy.optimize as sciopt
 import scipy.interpolate as sciinter
 import re
 from fears.utils import plotter
 import fears.utils.AutoRate as ar
 from pathlib import Path
-
+#%%
 def rolling_regression(xdata,ydata):
 
     # compute diff
@@ -122,8 +122,12 @@ def fit_hill_curve(xdata,ydata,hc=None,debug=False,interpolate=False):
         # else:
         #     # want the estimated drugless growth rate to be very close to the value given in ydata
         #     g_drugless_bound = [ydata[0]-0.0001*ydata[0],ydata[0]+0.0001*ydata[0]]
+        
+        gd_est = ydata[-1] #drugless growth rate estimate
+        gd_lb = gd_est - 0.1*gd_est
+        gd_ub = gd_est + 0.1*gd_est
 
-        bounds = ([ic50_est-0.5,ydata[-1]-0.1,-0.1],[ic50_est+0.5,ydata[-1]+0.1,-0.001]) # these aren't magic numbers these are just starting parameters that happen to work
+        bounds = ([ic50_est-0.5,gd_lb,-0.1],[ic50_est+0.5,gd_ub,-0.001]) # these aren't magic numbers these are just starting parameters that happen to work
 
         popt, pcov = sciopt.curve_fit(logistic_pharm_curve,
                                             xdata,ydata,p0=p0,bounds=bounds)
@@ -221,9 +225,21 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
     cc_est = np.mean(growth_curve[-2:])
 
     gr_est = rolling_regression(t,growth_curve)
+
+    if cc_est <= 0:
+        
+        d = {'gr':0,
+        'OD_0':0,
+        'OD_max':0,
+        'lambda':0} 
+        
+        return d,None
     
-    bounds = ([gr_est-0.2*gr_est,growth_curve[0]-0.1,cc_est-cc_est*0.05,0],
+    bounds = ([gr_est-0.2*gr_est,growth_curve[0]-0.1,cc_est-cc_est*0.05,-1000],
+
               [gr_est+0.2*gr_est,growth_curve[0]+0.1,cc_est+cc_est*0.05,max(t)])
+
+    # print(bounds)
 
     # p0 = [10**-3,growth_curve[0],cc_est] # starting parameters
 
@@ -258,7 +274,8 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
             
     d = {'gr':r,
         'OD_0':p0,
-        'OD_max':cc}   
+        'OD_max':cc,
+        'lambda':l}   
 
     if debug:
         # if r > 0:
@@ -273,7 +290,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
         p0 = round(popt[1]*10**5)/10**5
         k = round(popt[2]*10**5)/10**5
         r_t = round(popt[0]*3600,2)
-        title = 'rate = ' + str(round(3600*r,2)) + ' K = ' + str(k) + ' p0 = ' + str(round(p0,2))
+        title = 'rate = ' + str(round(r_t,2)) + ' K = ' + str(k) + ' p0 = ' + str(round(p0,2))
 
         ax.set_title(title)
         ax.set_xlabel('Time (hr)')
@@ -281,7 +298,7 @@ def est_logistic_params(growth_curve,t,debug=False,sigma=None,mode='logistic',
             ax.set_ylabel('Normalized OD')
         else:
             ax.set_ylabel('OD')
-            # ax.set_ylim(0,1)   
+        ax.set_ylim(0,1)   
 
     return d,pcov
 
@@ -427,362 +444,441 @@ def get_start_time(df,col=4):
     return dt
 
 #%%
-def make_fig():
+# def make_fig():
     # bg_keys = ['A12','B12','C12','D12','E12','F12','G12','H12']
-    drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,'control']
-    folder_path = '/data/08312022'
+drug_conc = [10000,2000,400,80,16,3.2,0.64,0.128,0.0256,0.00512,0,'control']
+folder_path = '/Users/kinge2/repos/seascapes_figures/data/multi_od/08312022'
 
-    plate_paths = get_plate_paths(folder_path)
+plate_paths = get_plate_paths(folder_path)
 
-    # fig,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(15,12))
+# fig,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(15,12))
 
-    count = 0
+count = 0
 
-    gr_lib = {}
+gr_lib = {}
 
-    rate_est_lib = {}
+rate_est_lib = {}
 
-    all_timeseries = {}
+all_timeseries = {}
+all_log_params = {}
 
-    for pp in plate_paths:
-    # for pp in [plate_paths[9]]:
+for pp in plate_paths:
+# for pp in [plate_paths[9]]:
 
-        row = int(np.floor(count/4))
-        col = int(np.mod(count,4))
+    row = int(np.floor(count/4))
+    col = int(np.mod(count,4))
 
-        # ax = ax_list[row,col]
+    # ax = ax_list[row,col]
 
-        # fig,ax = plt.subplots()
+    # fig,ax = plt.subplots()
 
-        data_paths0 = get_data_file_paths(pp)
+    data_paths0 = get_data_file_paths(pp)
 
-        timeseries_dict = {}
-        timeseries_dict['Time'] = []
+    timeseries_dict = {}
+    timeseries_dict['Time'] = []
+    logistic_params_dict = {}
 
-        for p in data_paths0:
+    for p in data_paths0:
 
-            df = pd.read_excel(p)
-            t = get_start_time(df)
-            df = parse_od_data_file(df)
+        df = pd.read_excel(p)
+        t = get_start_time(df)
+        df = parse_od_data_file(df)
 
-            data_dict = od_data_to_dict(df)
-            data_dict['Time'] = t
+        data_dict = od_data_to_dict(df)
+        data_dict['Time'] = t
 
-            # bg = get_background(data_dict,bg_keys)
-            for key in data_dict:
-                if key != 'Time':
-                    if key in timeseries_dict.keys():
-                        od = data_dict[key]
-                        timeseries_dict[key].append(data_dict[key])
-                    else:
-                        od = data_dict[key]
-                        timeseries_dict[key] = [od]
-            timeseries_dict['Time'].append(t)
-
-        # sort out time
-        t_vect = timeseries_dict['Time']
-        t0 = t_vect[0]
-        t_vect = [(t-t0).total_seconds() for t in t_vect]
-
-        # get summary data
-
-        replicates = ['A','B','C','D','E','F','G','H']
-        conditions = np.linspace(1,12,num=12)
-        conditions = [str(int(c)) for c in conditions]
-
-        data_avg = {}
-        data_std = {}
-        
-        gr_avg = []
-        gr_std = []
-
-        rate_est_dict = {}
-
-        for c in conditions:
-            rate_est = []
-            for r in replicates:
-
-                if not (count == 6 and (r == 'A' or r == 'H')):
-
-                    key = r+c
-
-                    od_vect = timeseries_dict[key]
-
-                    od_vect= np.array(od_vect)
-
-                    timeseries_dict[key] = od_vect
-
-                    d,pcov = est_logistic_params(od_vect,t_vect,debug=False,mode='logistic',
-                                                normalize=False)
-
-                    rate_est.append(d['gr'])
+        # bg = get_background(data_dict,bg_keys)
+        for key in data_dict:
+            if key != 'Time':
+                if key in timeseries_dict.keys():
+                    od = data_dict[key]
+                    timeseries_dict[key].append(data_dict[key])
                 else:
-                    key = r+c
-                    del timeseries_dict[key]
-                # r = rolling_regression(t_vect,od_vect)
-                # rate_est.append(r)
+                    od = data_dict[key]
+                    timeseries_dict[key] = [od]
+        timeseries_dict['Time'].append(t)
 
-            rate_est_dict[c] = rate_est
+    # sort out time
+    t_vect = timeseries_dict['Time']
+    t0 = t_vect[0]
+    t_vect = [(t-t0).total_seconds() for t in t_vect]
 
-            gr_avg.append(np.mean(rate_est))
-            gr_std.append(np.std(rate_est))
+    # get summary data
 
+    replicates = ['A','B','C','D','E','F','G','H']
+    conditions = np.linspace(1,12,num=12)
+    conditions = [str(int(c)) for c in conditions]
 
-        grl_t = {'avg':gr_avg,
-                'err':gr_std}
-        
-        gr_lib[str(count)] = grl_t
-        rate_est_lib[str(count)] = rate_est_dict
+    data_avg = {}
+    data_std = {}
+    
+    gr_avg = []
+    gr_std = []
 
-        all_timeseries[str(count)] = timeseries_dict
+    rate_est_dict = {}
 
-        count+=1
+    for c in conditions:
+        rate_est = []
+        for r in replicates:
 
-    #%% compute seascape
+            if not (count == 6 and (r == 'A' or r == 'H')):
 
-    seascape_lib = {}
-    for key in gr_lib:
-        
-        gr_t = gr_lib[key]['avg'][0:-1]
-        gr_t = [gr*3600 for gr in gr_t]
+                key = r+c
 
-        dc = [d for d in drug_conc if type(d) != str]
+                # control_key = r+'12'
 
-        d = fit_hill_curve(dc,gr_t,debug=False,interpolate=False)
-        seascape_lib[key] = d
+                # control_vect = np.array(timeseries_dict[control_key])
 
-    #%% plot all hill curve fits
+                od_vect = np.array(timeseries_dict[key])
 
-    cc = plotter.gen_color_cycler()
+                # od_vect = od_vect-control_vect
 
-    fig1,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(15,12))
-    # ax2.set_prop_cycle(cc)
+                od_vect= np.array(od_vect)
 
-    dc_fit = np.logspace(-3.5,4)
-    dc_plot = [np.log10(dc) for dc in dc_fit]
+                timeseries_dict[key] = od_vect
 
-    dc_log = drug_conc
-    dc_log = [dc for dc in dc_log if type(dc) != str]
-    dc_log = [np.log10(dc) for dc in dc_log if dc > 0]
-    dc_log = dc_log + [-3]
+                d,pcov = est_logistic_params(od_vect,t_vect,debug=False,mode='logistic',
+                        normalize=False)
 
-    count = 0
-    for key in gr_lib:
-        row = int(np.floor(count/4))
-        col = int(np.mod(count,4))
+                logistic_params_dict[key] = d
 
-        ax = ax_list[row,col]
-        gr_t = [g*3600 for g in gr_lib[key]['avg'][0:-1]]
 
-        gr_err = [e*3600 for e in gr_lib[key]['err'][0:-1]]
+                rate_est.append(d['gr'])
+            else:
+                key = r+c
+                del timeseries_dict[key]
+            # r = rolling_regression(t_vect,od_vect)
+            # rate_est.append(r)
 
-        ic50 = seascape_lib[key]['ic50']
-        g_drugless = seascape_lib[key]['g_drugless']
-        hc = seascape_lib[key]['hc']
+        rate_est_dict[c] = rate_est
 
-        g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
+        # num_zeros = np.arghwere(rate_est)
 
-        ax.errorbar(dc_log,gr_t,yerr=gr_err,fmt='o')
+        gr_avg.append(np.mean(rate_est))
+        gr_std.append(np.std(rate_est))
 
-        ax.plot(dc_plot,g_est)
-        ax.scatter(ic50,g_drugless/2,color='r',marker='*')
-        
-        ax.set_ylim(0,0.15)
 
-        # plt.show()
-        # xtl = ax.get_xticklabels()
-        # xt = ax.get_xticks()
-        # # xtl_new = xtl
-        # xtl[1].set_text('nd')
-        # ax.set_xticks(xt)
-        # ax.set_xticklabels(xtl)
+    grl_t = {'avg':gr_avg,
+            'err':gr_std}
+    
+    gr_lib[str(count)] = grl_t
+    rate_est_lib[str(count)] = rate_est_dict
 
-        ax.set_xlim(-3.5,4)
-        ax.set_title(key)
+    all_timeseries[str(count)] = timeseries_dict
+    all_log_params[str(count)] = logistic_params_dict
 
-        if col == 0:
-            ax.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=12)
-        if row == 3:
-            ax.set_xlabel('Log drug concentration (ug/mL)',fontsize=12)
-        ax.tick_params(axis='both', labelsize=12)
-        count +=1
+    count+=1
 
-    fig1.tight_layout()
+#%% compute seascape
 
-    #%% plot seascape
+seascape_lib = {}
+for key in gr_lib:
+    
+    gr_t = gr_lib[key]['avg'][0:-1]
+    gr_t = [gr*3600 for gr in gr_t]
 
-    seascape_lib = {}
-    for key in gr_lib:
-        
-        gr_t = gr_lib[key]['avg'][0:-1]
-        gr_t = [gr*3600 for gr in gr_t]
+    dc = [d for d in drug_conc if type(d) != str]
 
-        dc = [d for d in drug_conc if type(d) != str]
+    d = fit_hill_curve(dc,gr_t,debug=False,interpolate=False)
+    seascape_lib[key] = d
 
-        d = fit_hill_curve(dc,gr_t,debug=False,interpolate=False)
-        seascape_lib[key] = d
+#%% plot all hill curve fits
 
-    fig3,ax3 = plt.subplots(figsize=(10,6))
-    ax3.set_prop_cycle(cc)
-    dc_fit = np.logspace(-3.5,4,num=100)
+cc = plotter.gen_color_cycler()
 
-    for key in seascape_lib:
-        
-        ic50 = seascape_lib[key]['ic50']
-        g_drugless = seascape_lib[key]['g_drugless']
-        hc = seascape_lib[key]['hc']
+fig1,ax_list = plt.subplots(ncols=4,nrows=4,figsize=(15,12))
+# ax2.set_prop_cycle(cc)
 
-        g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
+dc_fit = np.logspace(-3.5,4)
+dc_plot = [np.log10(dc) for dc in dc_fit]
 
-        ax3.plot(dc_fit,g_est,linewidth=2,label=int(key))
+dc_log = drug_conc
+dc_log = [dc for dc in dc_log if type(dc) != str]
+dc_log = [np.log10(dc) for dc in dc_log if dc > 0]
+dc_log = dc_log + [-3]
 
-    ax3.set_xscale('log')
+count = 0
+for key in gr_lib:
+    row = int(np.floor(count/4))
+    col = int(np.mod(count,4))
 
-    ax3.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=15)
-    ax3.set_xlabel('Drug Concentration (ug/mL)',fontsize=15)
-    ax3.spines['top'].set_visible(False)
-    ax3.spines['right'].set_visible(False)
+    ax = ax_list[row,col]
+    gr_t = [g*3600 for g in gr_lib[key]['avg'][0:-1]]
 
-    ax3.tick_params(axis='both', labelsize=12)
-    ax3.legend(loc=(1,0),frameon=False)
-    # ax3.tick_params(axis='both', which='minor', labelsize=8)
+    gr_err = [e*3600 for e in gr_lib[key]['err'][0:-1]]
 
-    #%%
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
+    hc = seascape_lib[key]['hc']
 
-    fig4,ax4 = plt.subplots(figsize=(6,6))
-    ax4.set_prop_cycle(cc)
+    g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
 
-    for key in seascape_lib.keys():
+    ax.errorbar(dc_log,gr_t,yerr=gr_err,fmt='o')
 
-        # if key != '3':
-        ic50 = seascape_lib[key]['ic50']
-        g_drugless = seascape_lib[key]['g_drugless']
+    ax.plot(dc_plot,g_est)
+    ax.scatter(ic50,g_drugless/2,color='r',marker='*')
+    
+    ax.set_ylim(0,0.15)
 
-        ax4.scatter(ic50,g_drugless,marker='o',s=400,facecolor='w',edgecolors='b')
-        # ax4.annotate(key,(ic50-0.15,g_drugless-0.001),fontsize=12)
-        ax4.annotate(key,(ic50,g_drugless),fontsize=12,ha='center',va='center')
+    # plt.show()
+    # xtl = ax.get_xticklabels()
+    # xt = ax.get_xticks()
+    # # xtl_new = xtl
+    # xtl[1].set_text('nd')
+    # ax.set_xticks(xt)
+    # ax.set_xticklabels(xtl)
 
-    ax4.set_ylim(0.06,0.115)
-    ax4.set_xlim(-3,4)
-    ax4.set_ylabel('Drug-free growth rate ($hr^{-1}$)',fontsize=14)
-    ax4.set_xlabel('Log IC50 (ug/mL)',fontsize=14)
-    ax4.tick_params(axis='both', labelsize=13)
+    ax.set_xlim(-3.5,4)
+    ax.set_title(key)
 
-    #%% Weinreich MIC comparison
+    if col == 0:
+        ax.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=12)
+    if row == 3:
+        ax.set_xlabel('Log drug concentration (ug/mL)',fontsize=12)
+    ax.tick_params(axis='both', labelsize=12)
+    count +=1
 
-    mic_list = [0.088,1.4,0.063,32,0.13,3.6*10**2,0.18,3.6*10**2,0.088,23,1.4,
-                3.6*10**2,1.4,2.1*10**3,0.8,2.9*10**3]
+fig1.tight_layout()
 
-    mic_list = [np.log10(m) for m in mic_list]
+#%% plot seascape
 
-    fig5,ax5 = plt.subplots(figsize=(5,5))
-    count = 0
+seascape_lib = {}
+for key in gr_lib:
+    
+    gr_t = gr_lib[key]['avg'][0:-1]
+    gr_t = [gr*3600 for gr in gr_t]
 
-    for key in seascape_lib.keys():
-        ic50 = seascape_lib[key]['ic50']
-        mic = mic_list[count]
-        ax5.scatter(mic,ic50,marker='o',s=400,facecolor='w',edgecolors='b')
-        ax5.annotate(key,(mic,ic50),fontsize=12,ha='center',va='center')
-        count+=1
+    dc = [d for d in drug_conc if type(d) != str]
 
-    ax5.set_xlabel('Weinreich MIC (log(ug/mL))',fontsize=14)
-    ax5.set_ylabel('IC50 (log(ug/mL))',fontsize=14)
+    d = fit_hill_curve(dc,gr_t,debug=False,interpolate=False)
+    seascape_lib[key] = d
 
-    yl = ax5.get_ylim()
-    xl = ax5.get_xlim()
+fig3,ax3 = plt.subplots(figsize=(10,6))
+ax3.set_prop_cycle(cc)
+dc_fit = np.logspace(-3.5,4,num=100)
 
-    lim = (max(yl[0],xl[0]),max(yl[1],xl[1]))
-    ax5.set_xlim(lim)
-    ax5.set_ylim(lim)
+for key in seascape_lib:
+    
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
+    hc = seascape_lib[key]['hc']
 
-    ax5.plot(lim,lim,'--',color='black')
+    g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
 
-    ax5.tick_params(axis='both', labelsize=13)
+    ax3.plot(dc_fit,g_est,linewidth=2,label=int(key))
 
+ax3.set_xscale('log')
 
-    #%% Spot check plate 6
+ax3.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=15)
+ax3.set_xlabel('Drug Concentration (ug/mL)',fontsize=15)
+ax3.spines['top'].set_visible(False)
+ax3.spines['right'].set_visible(False)
 
-    # fig7,ax_list = plt.subplots(3,4,figsize=(10,8))
+ax3.tick_params(axis='both', labelsize=12)
+ax3.legend(loc=(1,0),frameon=False)
+# ax3.tick_params(axis='both', which='minor', labelsize=8)
 
-    # count = 0
+#%% ic50 vs g_drugless
 
-    # for c in conditions:
-    #     row = int(np.floor(count/4))
-    #     col = int(np.mod(count,4))
-    #     ax = ax_list[row,col]
-    #     for r in replicates:
-    #         key = r + c
-    #         od = timeseries_dict[key]
-    #         ax.plot(t_vect,od,label=r)
-        
-    #     ax.set_ylim(0,1)
+fig4,ax4 = plt.subplots(figsize=(6,6))
+ax4.set_prop_cycle(cc)
 
-    #     if count == 11:
-    #         ax.set_title('Neg control')
-    #     else:
-    #         dc = drug_conc[count]
+for key in seascape_lib.keys():
 
-    #         ax.set_title('Conc = ' + str(dc))
+    # if key != '3':
+    ic50 = seascape_lib[key]['ic50']
+    g_drugless = seascape_lib[key]['g_drugless']
 
-    #     count+=1
+    ax4.scatter(ic50,g_drugless,marker='o',s=400,facecolor='w',edgecolors='b')
+    # ax4.annotate(key,(ic50-0.15,g_drugless-0.001),fontsize=12)
+    ax4.annotate(key,(ic50,g_drugless),fontsize=12,ha='center',va='center')
 
-    # # ax_list[0][3].legend()
-    # fig7.tight_layout()
+ax4.set_ylim(0.06,0.115)
+ax4.set_xlim(-3,4)
+ax4.set_ylabel('Drug-free growth rate ($hr^{-1}$)',fontsize=14)
+ax4.set_xlabel('Log IC50 (ug/mL)',fontsize=14)
+ax4.tick_params(axis='both', labelsize=13)
 
-    #%%
-    fig1.savefig('figures/all_hill_fits.pdf',bbox_inches='tight')
-    fig3.savefig('figures/new_ecoli_seascape.pdf',bbox_inches='tight')
-    fig4.savefig('figures/gr_v_ic50.pdf',bbox_inches='tight')
-    fig5.savefig('figures/weinreich_MIC_comparison.pdf',bbox_inches='tight')
+#%% Weinreich MIC comparison
 
-    df = pd.DataFrame(seascape_lib)
-    df.to_excel('results/seascape_library.xlsx')
+mic_list = [0.088,1.4,0.063,32,0.13,3.6*10**2,0.18,3.6*10**2,0.088,23,1.4,
+            3.6*10**2,1.4,2.1*10**3,0.8,2.9*10**3]
+
+mic_list = [np.log10(m) for m in mic_list]
+
+fig5,ax5 = plt.subplots(figsize=(5,5))
+count = 0
+
+for key in seascape_lib.keys():
+    ic50 = seascape_lib[key]['ic50']
+    mic = mic_list[count]
+    ax5.scatter(mic,ic50,marker='o',s=400,facecolor='w',edgecolors='b')
+    ax5.annotate(key,(mic,ic50),fontsize=12,ha='center',va='center')
+    count+=1
+
+ax5.set_xlabel('Weinreich MIC (log(ug/mL))',fontsize=14)
+ax5.set_ylabel('IC50 (log(ug/mL))',fontsize=14)
+
+yl = ax5.get_ylim()
+xl = ax5.get_xlim()
+
+lim = (max(yl[0],xl[0]),max(yl[1],xl[1]))
+ax5.set_xlim(lim)
+ax5.set_ylim(lim)
+
+ax5.plot(lim,lim,'--',color='black')
+
+ax5.tick_params(axis='both', labelsize=13)
+
+
+#%% Spot check plate 6
+
+# fig7,ax_list = plt.subplots(3,4,figsize=(10,8))
+
+# count = 0
+
+# for c in conditions:
+#     row = int(np.floor(count/4))
+#     col = int(np.mod(count,4))
+#     ax = ax_list[row,col]
+#     for r in replicates:
+#         key = r + c
+#         od = timeseries_dict[key]
+#         ax.plot(t_vect,od,label=r)
+    
+#     ax.set_ylim(0,1)
+
+#     if count == 11:
+#         ax.set_title('Neg control')
+#     else:
+#         dc = drug_conc[count]
+
+#         ax.set_title('Conc = ' + str(dc))
+
+#     count+=1
+
+# # ax_list[0][3].legend()
+# fig7.tight_layout()
+
+#%%
+fig1.savefig('figures/all_hill_fits.pdf',bbox_inches='tight')
+fig3.savefig('figures/new_ecoli_seascape.pdf',bbox_inches='tight')
+fig4.savefig('figures/gr_v_ic50.pdf',bbox_inches='tight')
+fig5.savefig('figures/weinreich_MIC_comparison.pdf',bbox_inches='tight')
+
+df = pd.DataFrame(seascape_lib)
+df.to_excel('results/seascape_library.xlsx')
+
+#%%
+#%%
+
+cmap = cm.get_cmap('tab10',12)
+cmap = cmap.colors
+
+genotype = 7
+
+plate_t = all_timeseries[str(genotype)]
+log_params_t = all_log_params[str(genotype)]
+
+replicates = ['A','B','C','D','E','F','G','H']
+
+# for col in replicates:
+col = 'A'
+fig6,ax = plt.subplots()
+for row in range(12):
+    od = np.zeros(len(plate_t['Time']))
+    gr = 0
+    OD_0 = 0
+    OD_max = 0
+    l = 0
+# for col in replicates:
+    # col = 'B'
+    key = col + str(row+1)
+    od += np.array(plate_t[key])
+
+    d = log_params_t[key]
+    gr += d['gr']
+    OD_0 += d['OD_0']
+    OD_max += d['OD_max']
+    l += d['lambda']
+
+    if gr == 0:
+        # OD_max = 0.1
+        OD_0 = 0.1
+
+    # # od = od/8  
+    # if max(od) > 0.4: 
+    #     od = od/max(od) 
+    ax.plot(t_vect,od,'*',color = cmap[row],linewidth=1.5)
+
+    # gr = gr/8
+    # OD_0 = OD_0/8
+    # OD_max = OD_max/8
+    # l = l/8
+
+    # OD_max = 1
+    t = np.arange(min(t_vect),max(t_vect))
+    od_est = [logistic_growth_with_lag(tt,gr,OD_0,OD_max,l) for tt in t]
+    if type(drug_conc[row]) != str and drug_conc[row] != 0:
+        label = str(round(np.log10(drug_conc[row]),2))
+    else:
+        label = str(drug_conc[row])
+    ax.plot(t,od_est,color=cmap[row],label=label)
+    # ax.set_title(col)
+
+ax.set_ylabel('$OD_{600}$',fontsize=12)
+ax.set_xlabel('Time (s)',fontsize=12)
+ax.spines["right"].set_visible(False)
+ax.spines["top"].set_visible(False)
+ax.tick_params(axis='both', labelsize=12)
+ax.set_xlim(0,60000)
+
+ax.legend(loc=(1.05,0.1),title='Log Drug conc. \n(ug/mL)',frameon=False)
+
+# fig6.tight_layout()
+# fig6.subplots_adjust(right=0.7)
+fig6.savefig('figures/example_growth_curves.png',bbox_inches='tight')
+
+#%%
+fig7,ax = plt.subplots()
+    
+gr = gr_lib[str(genotype)]['avg'][0:-1]
+gr_err = gr_lib[str(genotype)]['err'][0:-1]
+
+gr_err= [3600*err for err in gr_err]
+gr = [3600*g for g in gr]
+
+dc_log = drug_conc
+dc_log = [dc for dc in dc_log if type(dc) != str]
+dc_log = [np.log10(dc) for dc in dc_log if dc > 0]
+dc_log = dc_log + [-3]
+
+ax.errorbar(dc_log,gr,yerr=gr_err,fmt='o')
+# ax.scatter(dc_log,gr)
+# ax.set_xscale('log')
+
+dc_t = np.logspace(-4,4,num=1000)
+
+key = str(genotype)
+ic50 = seascape_lib[key]['ic50']
+g_drugless = seascape_lib[key]['g_drugless']
+hc = seascape_lib[key]['hc']
+
+g_est = logistic_pharm_curve(dc_t,ic50,g_drugless,hc)
+
+dc_log = [np.log10(dc) for dc in dc_t]
+
+ax.plot(dc_log,g_est)
+ax.set_xlim(-3.5,4.5)
+
+ax.set_ylabel('Growth rate ($hr^{-1}$',fontsize=12)
+ax.set_xlabel('Drug conc. (log(ug/mL))',fontsize=12)
+ax.spines["right"].set_visible(False)
+ax.spines["top"].set_visible(False)
+ax.tick_params(axis='both', labelsize=12)
+
+fig7.savefig('figures/example_dose_response.png',bbox_inches='tight')
+
+    # return all_timeseries, all_log_params
     # fig7.savefig('spot_check_plate_9.pdf')
-    #%%
-    g_drugless = {'0': 0.3318887453542961,
-                    '1': 0.3289292896469517,
-                    '2': 0.31948618595999434,
-                    '3': 0.32185083539925147,
-                    '4': 0.3212835332399497,
-                    '5': 0.3281459659304418,
-                    '6': 0.3220102172565344,
-                    '7': 0.329715666905591,
-                    '8': 0.32235137224647364,
-                    '9': 0.3356938306834784,
-                    '10': 0.32721470140468945,
-                    '11': 0.32869021659670783,
-                    '12': 0.32194445877945627,
-                    '13': 0.329366209455696,
-                    '14': 0.327114087967487,
-                    '15': 0.32425708344443227}
-
-    old_drugless = {}
-
-    for key in seascape_lib.keys():
-        old_drugless[key] = seascape_lib[key]['g_drugless']
-        seascape_lib[key]['g_drugless'] = g_drugless[key]
-
-    fig6,ax6 = plt.subplots(figsize=(10,6))
-    ax6.set_prop_cycle(cc)
-    dc_fit = np.logspace(-3.5,4,num=100)
-
-    for key in seascape_lib:
-        
-        ic50 = seascape_lib[key]['ic50']
-        g_drugless = seascape_lib[key]['g_drugless']
-        hc = seascape_lib[key]['hc']
-
-        g_est = logistic_pharm_curve(dc_fit,ic50,g_drugless,hc)
-
-        ax6.plot(dc_fit,g_est,linewidth=2,label=int(key))
-
-    ax6.set_xscale('log')
-
-    ax6.set_ylabel('Growth rate ($hr^{-1}$)',fontsize=15)
-    ax6.set_xlabel('Drug Concentration (ug/mL)',fontsize=15)
-    ax6.spines['top'].set_visible(False)
-    ax6.spines['right'].set_visible(False)
-
-    ax6.tick_params(axis='both', labelsize=12)
-    ax6.legend(loc=(1,0),frameon=False)
 # %%

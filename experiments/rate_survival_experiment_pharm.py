@@ -10,12 +10,13 @@ def make_data(death_rate=None,
               population_template=None,
               timestep_scale=1,
               slopes=None,
+              max_doses=[100],
               experiment_type = 'rate-survival'):
 
 
    np.random.seed(2021)
 
-   max_doses = [100]
+   # max_doses = [100]
    curve_types = ['pharm']
       
    if n_sims is None:
@@ -34,7 +35,7 @@ def make_data(death_rate=None,
    init_counts = np.zeros(16)
    init_counts[0] = 10**10
     
-   options = {'doubling_time':.1,
+   options = {'doubling_time':1,
             'death_rate':death_rate,
             'mut_rate':mut_rate,
             'use_carrying_cap':True,
