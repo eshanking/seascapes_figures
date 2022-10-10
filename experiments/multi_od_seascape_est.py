@@ -9,7 +9,9 @@ from matplotlib import colors
 # import matplotlib.cm as mplcm
 import scipy.optimize as sciopt
 import scipy.interpolate as sciinter
+import scipy.stats as stats
 import re
+from fears.population import Population
 from fears.utils import plotter
 import fears.utils.AutoRate as ar
 from pathlib import Path
@@ -680,8 +682,16 @@ ax3.legend(loc=(1,0),frameon=False)
 
 #%% ic50 vs g_drugless
 
-fig4,ax4 = plt.subplots(figsize=(6,6))
+fig4,ax4 = plt.subplots(figsize=(5,5))
 ax4.set_prop_cycle(cc)
+ic50_list = []
+gr_list = []
+p = Population()
+
+cmap = cm.get_cmap('tab10',12)
+cmap = cmap.colors
+
+mut_v_gr = [[],[],[],[],[]]
 
 for key in seascape_lib.keys():
 
@@ -689,7 +699,21 @@ for key in seascape_lib.keys():
     ic50 = seascape_lib[key]['ic50']
     g_drugless = seascape_lib[key]['g_drugless']
 
-    ax4.scatter(ic50,g_drugless,marker='o',s=400,facecolor='w',edgecolors='b')
+    ic50_list.append(ic50)
+    gr_list.append(g_drugless)
+
+    # key_bin = int(key)
+
+    key_bin = p.int_to_binary(int(key))
+
+    num = 0
+    for s in key_bin:
+        num+=int(s)
+
+    mut_v_gr[num].append(g_drugless)
+
+    ax4.scatter(ic50,g_drugless,marker='o',s=400,facecolor=cmap[num+1],
+                edgecolors='w',label=int(num))
     # ax4.annotate(key,(ic50-0.15,g_drugless-0.001),fontsize=12)
     ax4.annotate(key,(ic50,g_drugless),fontsize=12,ha='center',va='center')
 
@@ -698,6 +722,39 @@ ax4.set_xlim(-3,4)
 ax4.set_ylabel('Drug-free growth rate ($hr^{-1}$)',fontsize=14)
 ax4.set_xlabel('Log IC50 (ug/mL)',fontsize=14)
 ax4.tick_params(axis='both', labelsize=13)
+
+handles, labels = ax4.get_legend_handles_labels()
+
+unique_labels = sorted(set(labels))
+labels = np.array(labels)
+unique_handles = []
+
+for lab in unique_labels:
+    indx = np.argwhere(labels==lab)
+    indx = indx[0][0]
+    unique_handles.append(handles[indx])
+
+ax4.legend(unique_handles,unique_labels,loc = (1,0),frameon=False,
+             fontsize=12,title='$n_{mut}$')
+
+gr_list = np.array(gr_list)
+ic50_list = np.array(ic50_list)
+
+gr_list = gr_list/np.max(gr_list)
+ic50_list = ic50_list/np.max(ic50_list)
+
+tradeoff_stats = stats.pearsonr(ic50_list,gr_list)
+
+gr_list = np.delete(gr_list,3)
+ic50_list = np.delete(ic50_list,3)
+
+gr_list = gr_list/np.max(gr_list)
+ic50_list = ic50_list/np.max(ic50_list)
+
+# gr_list = np.array(gr_list)/np.max(gr_list)
+tradeoff_stats_no3 = stats.pearsonr(ic50_list,gr_list)
+
+
 
 #%% Weinreich MIC comparison
 
@@ -709,8 +766,11 @@ mic_list = [np.log10(m) for m in mic_list]
 fig5,ax5 = plt.subplots(figsize=(5,5))
 count = 0
 
+ic50_list = []
+
 for key in seascape_lib.keys():
     ic50 = seascape_lib[key]['ic50']
+    ic50_list.append(ic50)
     mic = mic_list[count]
     ax5.scatter(mic,ic50,marker='o',s=400,facecolor='w',edgecolors='b')
     ax5.annotate(key,(mic,ic50),fontsize=12,ha='center',va='center')
@@ -729,6 +789,8 @@ ax5.set_ylim(lim)
 ax5.plot(lim,lim,'--',color='black')
 
 ax5.tick_params(axis='both', labelsize=13)
+
+weinreich_stats = stats.pearsonr(mic_list,ic50_list)
 
 
 #%% Spot check plate 6

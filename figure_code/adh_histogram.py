@@ -6,6 +6,8 @@ import numpy as np
 from fears.utils import results_manager
 import pickle
 from scipy import stats
+import seaborn as sns
+import pandas as pd
 
 def make_fig(exp=None,exp_info_path=None):
 
@@ -37,14 +39,16 @@ def make_fig(exp=None,exp_info_path=None):
     max_doses = int(np.sum(pop.impulses))
 
     n_subplots = len(exp_folders)-1
-    fig,ax_list = plt.subplots(ncols=n_subplots,figsize=(10,3))
+    fig,ax_list = plt.subplots(ncols=n_subplots,nrows=2,figsize=(10,5))
+
+    # fig2,ax_tb = plt.subplots(ncols=n_subplots,figsize=(10,3))
 
     # k=0
 
     # for exp in [exp_folders[2]]:
     num = 0
     for exp in exp_folders[:-1]:
-        ax = ax_list[num]
+        ax = ax_list[0,num]
         extinct_sched = np.zeros(n_scheduled_doses)
         extinct_sched = np.array([extinct_sched])
         survived_sched = np.zeros(n_scheduled_doses)
@@ -114,7 +118,7 @@ def make_fig(exp=None,exp_info_path=None):
         ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)
 
-        ax.set_ylabel('Odds (success/failure)',fontsize=12)
+        
         ax.set_xlabel('Scheduled dose',fontsize=12)
 
         ax.tick_params(axis='x', labelsize=12)
@@ -155,11 +159,51 @@ def make_fig(exp=None,exp_info_path=None):
         #             if p < sig_level:
         #                 ax.text(dose_num[i]+0.1,ratio[i],'*',fontsize='15')
 
+        # Time between first and second dose
+
+        ax = ax_list[1,num]
+
+        time_between_surv = []
+        time_between_ext = []
+
+        for s in survived_sched:
+            # print(s)
+            doses = np.argwhere(s==1)
+            if len(doses) > 1:
+                time_between_surv.append((doses[1]-doses[0])[0])
+        for e in extinct_sched:
+            doses = np.argwhere(e==1)
+            if len(doses) > 1:
+                time_between_ext.append((doses[1]-doses[0])[0])
+
+        d = {'survived':time_between_surv,
+             'extinct':time_between_ext}
+
+        # df = pd.DataFrame(d)
+
+        sns.stripplot(ax=ax,data=[time_between_surv,time_between_ext],size=3,
+                      jitter=0.2)
+        
+        # ax.tight_layout()
+        ax.set_xticklabels(['failure','success'])
+
+        ax.set_yticks([0,5,10,15,20])
+        ax.set_ylim(0,20)
+
+        ax.tick_params(axis='x', labelsize=12)
+        ax.tick_params(axis='y', labelsize=12)
+
+        # ax.set_ylabel('Time between first doses',fontsize=12)
+
         num+=1
 
+    ax_list[0,0].set_ylabel('Odds (success/failure)',fontsize=12)
+    ax_list[1,0].set_ylabel('Time between first doses',fontsize=12)
+    # fig2.tight_layout()
     fig.tight_layout()
     fig.savefig('figures/dose_ratio_barplot.pdf',bbox_inches='tight')
-    return survived_sched,extinct_sched
+    # return survived_sched,extinct_sched
+    # return df
 
 
 
