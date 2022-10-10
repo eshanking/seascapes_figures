@@ -688,10 +688,12 @@ ic50_list = []
 gr_list = []
 p = Population()
 
-cmap = cm.get_cmap('tab10',12)
+cmap = cm.get_cmap('magma',6)
 cmap = cmap.colors
 
 mut_v_gr = [[],[],[],[],[]]
+
+mut_list = []
 
 for key in seascape_lib.keys():
 
@@ -709,6 +711,8 @@ for key in seascape_lib.keys():
     num = 0
     for s in key_bin:
         num+=int(s)
+
+    mut_list.append(num)
 
     mut_v_gr[num].append(g_drugless)
 
@@ -740,21 +744,82 @@ ax4.legend(unique_handles,unique_labels,loc = (1,0),frameon=False,
 gr_list = np.array(gr_list)
 ic50_list = np.array(ic50_list)
 
-gr_list = gr_list/np.max(gr_list)
-ic50_list = ic50_list/np.max(ic50_list)
+# gr_list = gr_list/np.max(gr_list)
+# ic50_list = ic50_list/np.max(ic50_list)
 
-tradeoff_stats = stats.pearsonr(ic50_list,gr_list)
+# tradeoff_stats = stats.pearsonr(ic50_list,gr_list)
 
-gr_list = np.delete(gr_list,3)
-ic50_list = np.delete(ic50_list,3)
+# gr_list = np.delete(gr_list,3)
+# ic50_list = np.delete(ic50_list,3)
 
-gr_list = gr_list/np.max(gr_list)
-ic50_list = ic50_list/np.max(ic50_list)
+# gr_list = gr_list/np.max(gr_list)
+# ic50_list = ic50_list/np.max(ic50_list)
 
-# gr_list = np.array(gr_list)/np.max(gr_list)
-tradeoff_stats_no3 = stats.pearsonr(ic50_list,gr_list)
+# # gr_list = np.array(gr_list)/np.max(gr_list)
+# tradeoff_stats_no3 = stats.pearsonr(ic50_list,gr_list)
 
+#%% Mutations vs growth rate
+fig8, ax_list = plt.subplots(ncols=2,figsize=(8,4))
 
+ax = ax_list[0]
+
+wt_gr = seascape_lib['0']['g_drugless']
+gr_list_norm= gr_list/wt_gr
+
+ax.scatter(mut_list,gr_list_norm)
+
+ax.set_xticks([0,1,2,3,4])
+
+res = stats.linregress(mut_list,gr_list_norm)
+
+x = np.arange(5)
+y = res.slope*x + res.intercept
+
+ax.plot(x,y,color='orange',linewidth=2)
+
+ax.set_xlabel('# mutations',fontsize=14)
+ax.set_ylabel('Normalized growth rate',fontsize=14)
+ax.tick_params(axis='both', labelsize=13)
+
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+ann = '$r^2$ = ' + str(round(res.rvalue**2,2)) + '\n$p$ = ' + str(round(res.pvalue,3))
+ax.annotate(ann,(2.5,1.2),fontsize=12)
+
+# Mutations vs IC50
+ax = ax_list[1]
+
+wt_ic50 = seascape_lib['0']['ic50']
+
+ic50_list_norm = [10**x for x in ic50_list]
+
+ic50_list_norm= ic50_list_norm/(10**wt_ic50)
+
+ic50_list_norm = [np.log10(x) for x in ic50_list_norm]
+
+ax.scatter(mut_list,ic50_list_norm)
+
+res = stats.linregress(mut_list,ic50_list_norm)
+
+x = np.arange(5)
+y = res.slope*x + res.intercept
+
+ax.plot(x,y,color='orange',linewidth=2)
+
+ax.set_xticks([0,1,2,3,4])
+
+ax.set_xlabel('# mutations',fontsize=14)
+ax.set_ylabel('Normalized IC50',fontsize=14)
+ax.tick_params(axis='both', labelsize=13)
+
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+ann = '$r^2$ = ' + str(round(res.rvalue**2,2)) + '\n$p$ = ' + str(round(res.pvalue,3))
+ax.annotate(ann,(2.5,0.2),fontsize=12)
+
+fig8.tight_layout()
 
 #%% Weinreich MIC comparison
 
@@ -827,6 +892,7 @@ fig1.savefig('figures/all_hill_fits.pdf',bbox_inches='tight')
 fig3.savefig('figures/new_ecoli_seascape.pdf',bbox_inches='tight')
 fig4.savefig('figures/gr_v_ic50.pdf',bbox_inches='tight')
 fig5.savefig('figures/weinreich_MIC_comparison.pdf',bbox_inches='tight')
+fig8.savefig('figures/mutation_tradeoffs.pdf',bbox_inches='tight')
 
 df = pd.DataFrame(seascape_lib)
 df.to_excel('results/seascape_library.xlsx')
