@@ -56,7 +56,7 @@ ax_reg.spines["left"].set_visible(False)
 ax_reg.set_yticks([])
 ax_reg.set_xlabel('Days',fontsize=12)
 
-fig.savefig('figures/schematic_drug_conc_curve.png',bbox_inches='tight')
+fig.savefig('figures/schematic_drug_conc_curve.png',bbox_inches='tight',dpi=500)
 
 drug_conc_range = [-4,4]
 p1 = Population(fitness_data='random',
@@ -70,13 +70,13 @@ p1.drugless_rates = [1.28949852, 1.14399848, 1.22802236, 0.93619847]
 p1.ic50 = [-0.49205992, 1.76224515,  1.39341393,  2.84653598]
 
 fig2,ax = plt.subplots(figsize=(2,2))
-ax = plotter.plot_landscape(p,ax=ax,network_only=True)
-fig2.savefig('figures/schematic_landscape.png',bbox_inches='tight')
+ax = plotter.plot_landscape(p1,ax=ax,network_only=True)
+fig2.savefig('figures/schematic_landscape.png',bbox_inches='tight',dpi=500)
 
 
 fig3,ax = plt.subplots(figsize=(5,3))
-fig3,ax = plotter.plot_fitness_curves(p,ax=ax,fig=fig3)
+fig3,ax = plotter.plot_fitness_curves(p1,ax=ax,fig=fig3)
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.legend(loc='best',frameon=False,fontsize=14)
-fig3.savefig('figures/schematic_seascape.png',bbox_inches='tight')
+fig3.savefig('figures/schematic_seascape.png',bbox_inches='tight',dpi=500)
