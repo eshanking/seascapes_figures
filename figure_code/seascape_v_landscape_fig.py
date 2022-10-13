@@ -27,7 +27,7 @@ def make_fig(exp=None,exp_info_path=None):
 
     p = exp_info.p_landscape
 
-    f,ax[0,0] = p.plot_fitness_curves(pop=exp_info.p_landscape,
+    f,ax[0,0] = plotter.plot_fitness_curves(pop=exp_info.p_landscape,
                                         ax=ax[0,0],
                                         show_legend=False,
                                         show_axes_labels=False,
@@ -37,7 +37,7 @@ def make_fig(exp=None,exp_info_path=None):
     ax[0,0].set_xticks([10**-3,10**-1,10**1,10**3,10**5])
     ax[0,0].xaxis.tick_top()
 
-    f,ax[0,1] = p.plot_fitness_curves(pop=exp_info.p_seascape,
+    f,ax[0,1] = plotter.plot_fitness_curves(pop=exp_info.p_seascape,
                                         ax=ax[0,1], 
                                         show_legend=False,
                                         show_axes_labels=False,
@@ -59,7 +59,7 @@ def make_fig(exp=None,exp_info_path=None):
                 'alpha':0.5,
                 'linestyle':'--'}
 
-    ax[1,0],drug_ax = p.plot_timecourse_to_axes(counts,
+    ax[1,0],drug_ax = plotter.plot_timecourse_to_axes(p,counts,
                                         ax[1,0],
                                         labelsize=labelsize,
                                         linewidth=linewidth,
@@ -78,7 +78,7 @@ def make_fig(exp=None,exp_info_path=None):
     sim = seascape_exp + os.sep + sim
     counts, dc = unpack(sim)
 
-    ax[1,1],drug_ax = p.plot_timecourse_to_axes(counts,
+    ax[1,1],drug_ax = plotter.plot_timecourse_to_axes(p,counts,
                                         ax[1,1],
                                         labelsize=labelsize,
                                         linewidth=linewidth,
@@ -103,7 +103,7 @@ def make_fig(exp=None,exp_info_path=None):
     ydata = np.arange(yl[0],yl[1],0.1)
 
     for c in conc:
-        p.add_landscape_to_fitness_curve(c,null_ax,exp_info.p_landscape,
+        plotter.add_landscape_to_fitness_curve(c,null_ax,exp_info.p_landscape,
                                             textcolor=textcolor,
                                             cmap=cmap,
                                             edgecolor=edgecolor,
@@ -120,7 +120,7 @@ def make_fig(exp=None,exp_info_path=None):
 
     for i in range(len(conc)-1):
         c = conc[i]
-        p.add_landscape_to_fitness_curve(c,sea_ax,exp_info.p_seascape,
+        plotter.add_landscape_to_fitness_curve(c,sea_ax,exp_info.p_seascape,
                                             textcolor=textcolor,
                                             cmap=cmap,
                                             edgecolor=edgecolor,
@@ -135,7 +135,7 @@ def make_fig(exp=None,exp_info_path=None):
 
     c = conc[-1]
     # cbax = fig.add_subplot()
-    l1 = p.add_landscape_to_fitness_curve(c,sea_ax,exp_info.p_seascape,
+    l1 = plotter.add_landscape_to_fitness_curve(c,sea_ax,exp_info.p_seascape,
                                             textcolor=textcolor,
                                             cmap=cmap,
                                             edgecolor=edgecolor,
