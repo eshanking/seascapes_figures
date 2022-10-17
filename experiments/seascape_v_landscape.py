@@ -15,7 +15,7 @@ def make_data():
     options = {'doubling_time':1.5,
                'death_rate':0,
                'mut_rate':10**-9,
-               'n_sims':1,
+               'n_sims':10,
                # 'carrying_cap':False,
                'max_cells':10**11,
                'n_timestep':3000,
@@ -42,7 +42,7 @@ def make_data():
                    second_dose=10**1,
                    third_dose=10**5)
     
-    # e.run_experiment()
+    e.run_experiment()
     
     return e
 
