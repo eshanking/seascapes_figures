@@ -523,7 +523,7 @@ for pp in plate_paths:
         rate_est = []
         for r in replicates:
 
-            if not (count == 6 and (r == 'A' or r == 'H')):
+            if not (count == 6 and (r == 'A' or r == 'H')): 
 
                 key = r+c
 
@@ -548,7 +548,7 @@ for pp in plate_paths:
                 rate_est.append(d['gr'])
             else:
                 key = r+c
-                del timeseries_dict[key]
+                del timeseries_dict[key] # remove these two data points as outliers
             # r = rolling_regression(t_vect,od_vect)
             # rate_est.append(r)
 
