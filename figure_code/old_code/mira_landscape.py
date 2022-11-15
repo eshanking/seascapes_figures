@@ -7,7 +7,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from seascapes_figures.classes.population_class import Population
+from fears.population import Population
+from fears.utils import plotter
 
 p = Population()
 
@@ -21,4 +22,8 @@ cef_landscape = np.array(cef_landscape)
 
 fig,ax = plt.subplots()
 
-ax = p.plot_landscape(fitness=cef_landscape)
+cbloc = [0.55, 0.25, 0.3, 0.5]
+
+ax = plotter.plot_landscape(p,fit_land=cef_landscape,square=True,colorbar=False,cmap='magma',ax=ax)
+
+fig.savefig('example_landscape.pdf',bbox_inches='tight')

@@ -839,6 +839,7 @@ for key in seascape_lib.keys():
     mic = mic_list[count]
     ax5.scatter(mic,ic50,marker='o',s=400,facecolor='w',edgecolors='b')
     ax5.annotate(key,(mic,ic50),fontsize=12,ha='center',va='center')
+    print(key)
     count+=1
 
 ax5.set_xlabel('Weinreich MIC (log(ug/mL))',fontsize=14)
@@ -847,7 +848,7 @@ ax5.set_ylabel('IC50 (log(ug/mL))',fontsize=14)
 yl = ax5.get_ylim()
 xl = ax5.get_xlim()
 
-lim = (max(yl[0],xl[0]),max(yl[1],xl[1]))
+lim = (min(yl[0],xl[0]),max(yl[1],xl[1]))
 ax5.set_xlim(lim)
 ax5.set_ylim(lim)
 
