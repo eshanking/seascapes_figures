@@ -97,10 +97,10 @@ def make_fig(exp=None,exp_info_path=None):
     edgecolor='black'
     textcolor='goldenrod'
     # pad = -0.35
-    pad=0.9
+    pad=1.1
 
     yl = null_ax.get_ylim()
-    ydata = np.arange(yl[0],yl[1],0.1)
+    ydata = np.arange(-0.1,yl[1],0.1)
 
     for c in conc:
         plotter.add_landscape_to_fitness_curve(c,null_ax,exp_info.p_landscape,
@@ -146,18 +146,18 @@ def make_fig(exp=None,exp_info_path=None):
                                             square=True,
                                             node_size = 200,
                                             colorbar=True,
-                                            cbloc = [0.1,0.35,0.3,0.5],
+                                            cbloc = [0.1,0.42,0.3,0.5],
                                             pad=pad)
 
     # reposition axes
     # w = 0.3
     # h = 0.27
-    w = 0.26
-    h = 0.22
+    w = 0.24
+    h = 0.20
 
     # wspace = (1-2*w)/3
     wspace = (1-2*w)/2.7
-    hspace = (1-2*h)/2.7
+    hspace = (1-2*h)/3
 
     bottom = np.array([[1-hspace-h,1-hspace-h],[hspace,hspace]])
     left = np.array([[wspace,1-wspace-w],[wspace,1-wspace-w]])
@@ -177,7 +177,7 @@ def make_fig(exp=None,exp_info_path=None):
     ax[0,0].set_ylabel('Growth rate ($hr^{-1}$)',fontsize=labelsize)
         
     ax[1,1].legend(frameon=False,fontsize=7,
-                bbox_to_anchor=(-0.75, -0.45, 1., .102), loc='lower left',
+                bbox_to_anchor=(-0.9, -0.5, 1.2, .11), loc='lower left',
                 ncol=4, mode="expand", borderaxespad=0.)
         
     for row in range(2):
@@ -186,12 +186,14 @@ def make_fig(exp=None,exp_info_path=None):
             pos = [left[row,col],bottom[row,col],w,h]
             a.set_position(pos)
             
-    ax[0,0].annotate('a.', xy=(-0.15,1.05),  xycoords='axes fraction')
-    ax[1,0].annotate('c.', xy=(-0.15,1.5),  xycoords='axes fraction')
-    ax[0,1].annotate('b.', xy=(-0.15,1.05),  xycoords='axes fraction')
-    ax[1,1].annotate('d.', xy=(-0.15,1.5),  xycoords='axes fraction')
-    ax[1,1].annotate('f.', xy=(-0.15,1.05),  xycoords='axes fraction')
-    ax[1,0].annotate('e.', xy=(-0.15,1.05),  xycoords='axes fraction')
+    ax[0,0].annotate('A', xy=(-0.15,1.05),  xycoords='axes fraction')
+    ax[1,0].annotate('C', xy=(-0.15,1.75),  xycoords='axes fraction')
+    ax[0,1].annotate('B', xy=(-0.15,1.05),  xycoords='axes fraction')
+    ax[1,1].annotate('D', xy=(-0.15,1.75),  xycoords='axes fraction')
+    ax[1,1].annotate('F', xy=(-0.15,1.05),  xycoords='axes fraction')
+    ax[1,0].annotate('E', xy=(-0.15,1.05),  xycoords='axes fraction')
             
     # results_manager.save_fig(fig,'seascape_v_landscape.pdf',bbox_inches='tight')
-    fig.savefig('results/seascape_v_landscape.pdf',bbox_inches='tight')
+    fig.savefig('figures/seascape_v_landscape.pdf',bbox_inches='tight')
+
+    return fig

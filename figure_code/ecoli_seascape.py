@@ -9,7 +9,7 @@ def make_fig():
     fig,ax = plt.subplots(figsize=(11,5.5))
 
     xdata = np.logspace(-3.5,4.5,num=10000)
-    fig,ax = p.plot_fitness_curves(fig=fig,ax=ax,legend_cols=2,xdata=xdata);
+    fig,ax = p.plot_fitness_curves(fig=fig,ax=ax,show_legend=False,xdata=xdata);
 
     vert_lines_ydata = np.arange(9)/10
     vert_lines_kwargs = {'linewidth':3,'alpha':0.7}
@@ -55,6 +55,8 @@ def make_fig():
 
     ax.set_ylim(0,0.12)
     ax.set_xlim([10**-2.7,10**3.5])
+    ax.tick_params(axis='both', labelsize=20)
+    ax.legend(fontsize=14,frameon=False,loc=(1.01,-0.05))
 
     fig.savefig('figures/seascape_with_landscapes.pdf',bbox_inches='tight')
     return p
