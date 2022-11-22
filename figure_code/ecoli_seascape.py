@@ -61,4 +61,4 @@ def make_fig():
     fig.savefig('figures/seascape_with_landscapes.pdf',bbox_inches='tight')
     return p
 # results_manager.save_fig(fig,'ecoli_seascape_with_landscapes.pdf')
-# make_fig()
+make_fig()

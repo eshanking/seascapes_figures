@@ -9,14 +9,14 @@ from scipy import stats
 import seaborn as sns
 import pandas as pd
 
-def make_fig(exp=None,exp_info_path=None):
+
+def make_fig(exp=None, exp_info_path=None):
 
     if exp is None:
         exp = pickle.load(open(exp_info_path,'rb'))
 
-    exp_folders,exp_info = results_manager.get_experiment_results(exp=exp)
+    exp_folders, exp_info = results_manager.get_experiment_results(exp=exp)
 
-    n_sims = exp_info.n_sims
     p_drop = exp_info.prob_drops
 
     exp_folders.reverse()
