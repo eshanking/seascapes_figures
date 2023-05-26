@@ -38,7 +38,7 @@ import matplotlib as mpl
 
 #%% Surface plot
 
-fig,ax = plt.subplots(figsize=(8,3))
+fig,ax = plt.subplots(figsize=(6,3))
 
 # fig,ax = plt.subplots(figsize=(5,3))
 
