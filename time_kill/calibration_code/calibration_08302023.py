@@ -255,7 +255,8 @@ with open('../rfu30_to_cell_count.pkl','wb') as f:
 # %% define dynamic range
 
 cell_count_range = cell_count[1:]
-dilution_range = dilutions_str[1:]
+# dilution_range = dilutions_str[1:]
+dilution_range = dilutions[1:]
 fluor_range = fluor_avg[1:]
 
 fig,ax_list = plt.subplots(ncols=2,figsize=(8,4))
@@ -278,4 +279,43 @@ ax.set_ylabel('Fluorescence (RFU$_{30}$)',fontsize=12)
 
 fig.tight_layout()
 
+#%%
+
+fig,ax = plt.subplots()
+
+fluor_log = np.log10(fluor_range)
+
+ax.plot(fluor_log,dilution_range,'x',color='k',markersize=8,mew=2,label='data')
+
+#  fit fluor vs dilution to exponential
+
+def expon(x,a,r,k):
+    return a*np.exp(r*x) - k
+
+p0 = [0.5,0,0]
+popt,pcov = sciopt.curve_fit(expon,fluor_log,dilution_range,p0=p0)
+
+xfit = np.linspace(np.min(fluor_log),np.max(fluor_log),100)
+yfit = expon(xfit,*popt)
+
+ax.plot(xfit,yfit,'--',color='k',label='exponential fit',linewidth=2)
+
+ax.legend(frameon=False,fontsize=12)
+
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+
+ax.set_xlabel('Fluorescence (RFU$_{30}$)',fontsize=12)
+ax.set_ylabel('Dilution',fontsize=12)
+
+ax.annotate('Min fluor = {}'.format(np.min(fluor_range)),(0.05,0.4),xycoords='axes fraction')
+ax.annotate('Max fluor = {}'.format(np.round(np.max(fluor_range))),(0.05,0.3),xycoords='axes fraction')
+# ax.set_yscale('log')
+
+# %%
+def rfu_to_dilution(rfu):
+    return expon(np.log10(rfu),*popt)
+
+with open('../rfu_to_dilution.pkl','wb') as f:
+    pickle.dump(rfu_to_dilution,f)
 # %%
