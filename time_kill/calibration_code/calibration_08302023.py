@@ -262,7 +262,8 @@ fluor_range = fluor_avg[1:]
 fig,ax_list = plt.subplots(ncols=2,figsize=(8,4))
 
 ax = ax_list[0]
-ax.plot(dilution_range,cell_count_range,'o',color='k')
+x = np.arange(len(dilution_range))
+ax.plot(x,cell_count_range,'o',color='k')
 
 # ax.set_xscale('symlog',linthresh=0.0001)
 ax.set_yscale('symlog',linthresh=4000)
@@ -271,11 +272,19 @@ ax.set_xlabel('Dilution',fontsize=12)
 ax.set_ylabel('Cell Count (cells/$\mu$L)',fontsize=12)
 
 ax = ax_list[1]
-ax.plot(dilution_range,fluor_range,'o',color='k')
+ax.plot(x,fluor_range,'o',color='k')
 
 ax.set_yscale('log')
 ax.set_xlabel('Dilution',fontsize=12)
 ax.set_ylabel('Fluorescence (RFU$_{30}$)',fontsize=12)
+
+dilution_plot = ['2$^{1}$','2$^{2}$','2$^{3}$','2$^{4}$','2$^{5}$','2$^{6}$','2$^{7}$','2$^{8}$','0x']
+
+for ax in ax_list:
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.set_xticks(x)
+    ax.set_xticklabels(dilution_plot,rotation=45)
 
 fig.tight_layout()
 
@@ -285,7 +294,9 @@ fig,ax = plt.subplots()
 
 fluor_log = np.log10(fluor_range)
 
-ax.plot(fluor_log,dilution_range,'x',color='k',markersize=8,mew=2,label='data')
+cell_count_plot = np.array(dilution_range)*10**6
+
+ax.plot(fluor_log,cell_count_plot,'x',color='k',markersize=8,mew=2,label='data')
 
 #  fit fluor vs dilution to exponential
 
@@ -296,7 +307,7 @@ p0 = [0.5,0,0]
 popt,pcov = sciopt.curve_fit(expon,fluor_log,dilution_range,p0=p0)
 
 xfit = np.linspace(np.min(fluor_log),np.max(fluor_log),100)
-yfit = expon(xfit,*popt)
+yfit = expon(xfit,*popt) * 10**6
 
 ax.plot(xfit,yfit,'--',color='k',label='exponential fit',linewidth=2)
 
@@ -305,11 +316,17 @@ ax.legend(frameon=False,fontsize=12)
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 
-ax.set_xlabel('Fluorescence (RFU$_{30}$)',fontsize=12)
-ax.set_ylabel('Dilution',fontsize=12)
+ax.set_xlabel('Log$_{10}$ fluorescence',fontsize=12)
+ax.set_yscale('symlog',linthresh=3000)
+# ax.set_ylabel('Dilution',fontsize=12)
+ax.set_ylabel('Cell count (cells/$\mu$L)',fontsize=12)
 
-ax.annotate('Min fluor = {}'.format(np.min(fluor_range)),(0.05,0.4),xycoords='axes fraction')
-ax.annotate('Max fluor = {}'.format(np.round(np.max(fluor_range))),(0.05,0.3),xycoords='axes fraction')
+ax.tick_params(axis='both',which='major',labelsize=12)
+
+fig.savefig('fluor_vs_dilution.pdf',bbox_inches='tight')
+
+# ax.annotate('Min fluor = {}'.format(np.min(fluor_range)),(0.05,0.4),xycoords='axes fraction')
+# ax.annotate('Max fluor = {}'.format(np.round(np.max(fluor_range))),(0.05,0.3),xycoords='axes fraction')
 # ax.set_yscale('log')
 
 # %%
