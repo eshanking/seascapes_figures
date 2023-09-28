@@ -6,7 +6,9 @@ from fears.utils import results_manager, dir_manager, stats, plotter
 import pandas as pd
 import pickle
 
-def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[1,2]):
+def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[1,2],
+             xmin=0,
+             xmax=None):
 
     if roc_exp is None:
         roc_exp = pickle.load(open(exp_info_path,'rb'))
@@ -24,6 +26,8 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[1,2])
     pop = exp_info.populations[0]
 
     km_data = stats.km_curve(exp=roc_exp,resistance_outcome=resistance_outcome)
+    prop_data1 = stats.n_mut_curve(exp=roc_exp,nmut=1)
+    prop_data2 = stats.n_mut_curve(exp=roc_exp,nmut=2)
     tmax = int(pop.n_timestep)
 
     if type(resistance_outcome[0]) == list:
@@ -51,20 +55,25 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[1,2])
                                           mode='survival',
                                           t_max=tmax)
         
-        ax[1] = plotter.plot_kaplan_meier(pop,gen1_resistance_times,
-                                          ax=ax[1],
-                                          n_sims=n_sims,
-                                          label=k_abs,
-                                          mode='resistant',
-                                          t_max=tmax)
+        for key in prop_data1.keys():
+            ax[1].plot(prop_data1[key])
+
+        for key in prop_data2.keys():
+            ax[2].plot(prop_data2[key])
+        # ax[1] = plotter.plot_kaplan_meier(pop,gen1_resistance_times,
+        #                                   ax=ax[1],
+        #                                   n_sims=n_sims,
+        #                                   label=k_abs,
+        #                                   mode='resistant',
+        #                                   t_max=tmax)
         
-        ax[2] = plotter.plot_kaplan_meier(pop,gen2_resistance_times,
-                                          ax=ax[2],
-                                          n_sims=n_sims,
-                                        #   label=f"{k_abs_t:.1e}",
-                                          label = k_abs,
-                                          mode='resistant',
-                                          t_max=tmax)
+        # ax[2] = plotter.plot_kaplan_meier(pop,gen2_resistance_times,
+        #                                   ax=ax[2],
+        #                                   n_sims=n_sims,
+        #                                 #   label=f"{k_abs_t:.1e}",
+        #                                   label = k_abs,
+        #                                   mode='resistant',
+        #                                   t_max=tmax)
     
     for a in ax:
         a.spines["right"].set_visible(False)
@@ -103,10 +112,12 @@ def make_fig(roc_exp=None,exp_info_path=None,save=True,resistance_outcome=[1,2])
     
     xmax = xmax/2
 
+    ax[0].set_ylim([-10,110])
     for a in ax:
-        a.set_ylim([-10,110])
-        # a.set_xlim([0,xmax])
+        # a.set_ylim([-10,110])
         a = plotter.x_ticks_to_days(pop,a)
+        if xmax is not None:
+            a.set_xlim([xmin,xmax])
 
     if save:
         # results_manager.save_fig(fig,'roc_km_curve.pdf',bbox_inches='tight')
