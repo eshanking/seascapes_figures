@@ -4,7 +4,7 @@ from fears.utils import AutoRate
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-od_path = 'EK_single_OD600_20230517_154009_no_lid.xlsx'
+od_path = 'time_kill/calibration_data/calibration_05172023/EK_single_OD600_20230517_154009_no_lid.xlsx'
 p_od = AutoRate.Plate(od_path,mode='single_measurement')
 od_data = p_od.od_data_to_dict(p_od.data)
 # raw cell count data

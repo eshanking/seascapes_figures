@@ -16,6 +16,26 @@ from fears.utils import plotter
 import fears.utils.AutoRate as ar
 from pathlib import Path
 #%%
+
+def int_to_binary(self,num):
+    """
+    Converts an integer to binary representation with the number of 
+    digits equal to the number of alleles in the model.
+
+    Parameters
+    ----------
+    num : int
+        Number to be converted.
+
+    Returns
+    -------
+    str
+        Binary representation.
+
+    """
+    pad = int(np.log(self.n_genotype,2))
+    return bin(num)[2:].zfill(pad)
+
 def rolling_regression(xdata,ydata):
 
     # compute diff
@@ -743,6 +763,9 @@ ax4.legend(unique_handles,unique_labels,loc = (1,0),frameon=False,
 
 gr_list = np.array(gr_list)
 ic50_list = np.array(ic50_list)
+
+df = pd.DataFrame({'ic50':ic50_list,'gr':gr_list})
+df.to_csv('data/ic50_v_gr.csv')
 
 # gr_list = gr_list/np.max(gr_list)
 # ic50_list = ic50_list/np.max(ic50_list)

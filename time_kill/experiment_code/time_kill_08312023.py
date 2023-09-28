@@ -9,6 +9,10 @@ import scipy
 from scipy.integrate import odeint
 from scipy.optimize import curve_fit
 import pickle
+import pandas as pd
+import calibration_08302023 as cal
+
+rfu30_to_dilution = cal.run()
 
 def atoi(text):
     return int(text) if text.isdigit() else text
@@ -26,8 +30,8 @@ def natural_keys(text):
 # with open('calibration_05172023/spline.pkl','rb') as f:
 #     spline = pickle.load(f)
 
-with open('../rfu_to_dilution.pkl','rb') as f:
-    rfu30_to_dilution = pickle.load(f)
+# with open('../rfu_to_dilution.pkl','rb') as f:
+#     rfu30_to_dilution = pickle.load(f)
 
 exp_folder = '../experiment_data/tk_08302023'
 plate_paths = os.listdir(exp_folder)
@@ -170,6 +174,7 @@ fig.legend(fontsize=10,frameon=False,bbox_to_anchor=(1.05,0.9),title='xMIC')
 fig.suptitle('Cell count over time',fontsize=14)
 
 # %%
+cmap = mpl.colormaps['viridis']
 
 def growth_diffeq(N,t,K,Kss,alpha,cc):
     # cc = 8.55 # carrying capacity
@@ -181,18 +186,31 @@ def growth_diffeq(N,t,K,Kss,alpha,cc):
     return dydt
 
 def growth_sol(t,K,Kss,alpha,cc):
-    y = odeint(growth_diffeq,1,t,args=(K,Kss,alpha,cc))
+    y = odeint(growth_diffeq,2,t,args=(K,Kss,alpha,cc))
     return y[:,0]
 
 # estimate K
 
 y = np.log10(cell_count['B'])
-y = y-y[0] + 1
+y = y-y[0] + 2
 
-p0 = [0.01,0,0,4]
+p0 = [0.01,4]
+alpha = 0
+Kss = 0
 
 x = sample_time
-popt,pcov = curve_fit(growth_sol,x,y,p0=p0)
+x = np.array(x,dtype="float64")
+y = np.array(y,dtype="float64")
+
+rate_err = []
+
+popt,pcov = curve_fit(lambda x, K, cc: growth_sol(x,K,Kss,alpha,cc),x,y,p0=p0,
+                      maxfev=10000)
+
+K = popt[0]
+cc = popt[1]
+
+rate_err.append(np.sqrt(np.diag(pcov))[0])
 
 # plot fit
 
@@ -200,12 +218,12 @@ fig,ax = plt.subplots()
 
 ax.plot(x,y,'o',color='k',label='data')
 
-xfit = np.linspace(0,300,100)
-yfit = growth_sol(xfit,*popt)
+xfit = np.linspace(0,np.max(x),100)
+yfit = growth_sol(xfit,K,0,0,cc)
 ax.plot(xfit,yfit,'-',label='fit',color=cmap(0))
 
-K = popt[0]
-cc = popt[3]
+# K = popt[0]
+# cc = popt[3]
 row_indx = 1
 
 alpha_list = [0]
@@ -216,14 +234,8 @@ prev_alpha = 0
 for row in row_list[2:-1]:
     x = sample_time
     y = np.log10(cell_count[row])
-    y = y-y[0] + 1
+    y = y-y[0] + 2
 
-    if row == 'G':
-        y = np.delete(y,1)
-        x = np.delete(x,1)
-    
-    x = np.delete(x,y<0)
-    y = np.delete(y,y<0)
     #     prev_alpha = 0.1
     # if row == 'C':
     #     y = np.delete(y,np.s_[8:])
@@ -238,6 +250,8 @@ for row in row_list[2:-1]:
     popt,pcov = curve_fit(lambda x, Kss, alpha: growth_sol(x,K,Kss,alpha,cc),
                         x,y,p0=p0,maxfev=10000,bounds=bounds)
     
+    rate_err.append(np.sqrt(np.diag(pcov))[0])
+
     Kss = popt[0]
     alpha = popt[1]
     yfit = growth_sol(xfit,K,Kss,alpha,cc)
@@ -249,8 +263,93 @@ for row in row_list[2:-1]:
 
     row_indx += 1
 
-# %%
-net_rate = K - Kss_list
+net_rate = K - np.array(Kss_list)
+
+rate_err = np.array(rate_err)
+#%%
+
+# def growth_diffeq(N,t,K,Kss,alpha,cc):
+#     # cc = 8.55 # carrying capacity
+#     # if N <= 0:
+#     #     dydt = 0
+#     # else:   
+#     dydt = (K-Kss*(1-np.exp(-alpha*t)))*N*(1-N/cc)
+
+#     return dydt
+
+# def growth_sol(t,K,Kss,alpha,cc):
+#     y = odeint(growth_diffeq,1,t,args=(K,Kss,alpha,cc))
+#     return y[:,0]
+
+# # estimate K
+
+# y = np.log10(cell_count['B'])
+# y = y-y[0] + 1
+
+# p0 = [0.01,0,0,4]
+
+# x = sample_time
+# popt,pcov = curve_fit(growth_sol,x,y,p0=p0)
+
+# # plot fit
+
+# fig,ax = plt.subplots()
+
+# ax.plot(x,y,'o',color='k',label='data')
+
+# xfit = np.linspace(0,300,100)
+# yfit = growth_sol(xfit,*popt)
+# ax.plot(xfit,yfit,'-',label='fit',color=cmap(0))
+
+# K = popt[0]
+# cc = popt[3]
+# row_indx = 1
+
+# alpha_list = [0]
+# Kss_list = [0]
+
+# prev_alpha = 0
+
+# for row in row_list[2:-1]:
+#     x = sample_time
+#     y = np.log10(cell_count[row])
+#     y = y-y[0] + 1
+
+#     if row == 'G':
+#         y = np.delete(y,1)
+#         x = np.delete(x,1)
+    
+#     x = np.delete(x,y<0)
+#     y = np.delete(y,y<0)
+#     #     prev_alpha = 0.1
+#     # if row == 'C':
+#     #     y = np.delete(y,np.s_[8:])
+#     #     x = np.delete(x,np.s_[8:])
+
+#     ax.plot(x,y,'o',color=cmap(row_indx/5),label=row)
+
+#     p0 = [0.1,0.1]
+#     bounds = [[0,0],[1,1]]
+#     # bounds = [[0,prev_alpha],[1,1]]
+
+#     popt,pcov = curve_fit(lambda x, Kss, alpha: growth_sol(x,K,Kss,alpha,cc),
+#                         x,y,p0=p0,maxfev=10000,bounds=bounds)
+    
+#     Kss = popt[0]
+#     alpha = popt[1]
+#     yfit = growth_sol(xfit,K,Kss,alpha,cc)
+#     ax.plot(xfit,yfit,'-',color=cmap(row_indx/5))
+
+#     alpha_list.append(alpha)
+#     Kss_list.append(Kss)
+#     prev_alpha = alpha
+
+#     row_indx += 1
+
+
+# net_rate = K - Kss_list
+
+#%%
 
 fig,ax = plt.subplots()
 
@@ -267,21 +366,24 @@ fig,ax = plt.subplots()
 
 rate = []
 
+rate_err = []
+
 row_indx = 0
 for row in row_list[1:-1]:
     if row == 'B' or row == 'C':
-        range = sub_mic_range
+        range_t = sub_mic_range
         
     else:
-        range = above_mic_range
+        range_t = above_mic_range
     
-    x = sample_time[range]
-    y = np.log10(cell_count[row]*10**6)[range]
+    x = sample_time[range_t]
+    y = np.log10(cell_count[row]*10**6)[range_t]
     
     ax.plot(x,y,'o',color=cmap(row_indx/5),label=row)
 
     res = scipy.stats.linregress(x,y)
     rate.append(res.slope)
+    rate_err.append(res.stderr)
 
     # plot fit
     xfit = np.linspace(0,300,100)
@@ -290,7 +392,8 @@ for row in row_list[1:-1]:
 
     row_indx += 1
 rate = np.array(rate)
-# %%
+rate_err = np.array(rate_err)
+# %% fit pharmacodynamic model
 
 def pharmacodynamic_curve(c, gmax, gmin, mic, k):
     """pharmacodynamic model adapted from Foerster et al.
@@ -336,9 +439,18 @@ fig,ax = plt.subplots()
 
 drug_conc = [0,0.01,0.1,1,10,100]
 
-ax.plot(drug_conc,rate*60,'o',color='k')
+# ax.plot(drug_conc,rate*60,'o',color='k')
+
+ax.errorbar(drug_conc,rate*60,yerr=rate_err*60,fmt='o',color='k',
+            label='data')
 
 ax.plot(xfit,yfit*60,'-',color='red')
 
 ax.set_xscale('symlog',linthresh=0.01)
+
+df = pd.DataFrame({'drug_conc':drug_conc,'rate':rate*60,'mic':mic,'k':k,
+                   'err':rate_err*60})
+
+df.to_csv('results_08312023.csv',index=False)
+
 # %%

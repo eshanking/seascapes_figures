@@ -11,8 +11,8 @@ import pickle
 def run():
     # ab_plate_path = 'calibration_05172023/EK_single_AB_constant_gain_20230517_161938_30_min.xlsx'
     # od_plate_path = 'calibration_05172023/EK_single_OD600_20230517_154009_no_lid.xlsx'
-    ab_plate_path = 'time_kill/calibration_data/calibration_08302023/EK_single_AB_constant_gain_20230830_122655.xlsx'
-    od_plate_path = 'time_kill/calibration_data/calibration_08302023/EK_single_OD600_20230830_114542.xlsx'
+    ab_plate_path = '../calibration_data/calibration_08302023/EK_single_AB_constant_gain_20230830_122655.xlsx'
+    od_plate_path = '../calibration_data/calibration_08302023/EK_single_OD600_20230830_114542.xlsx'
     p_ab = AutoRate.Plate(ab_plate_path,mode='single_measurement')
     p_od = AutoRate.Plate(od_plate_path,mode='single_measurement')
     od_data = p_od.od_data_to_dict(p_od.data)
@@ -57,7 +57,7 @@ def run():
     od_std = np.std(od_data_t,axis=0)
     od_err = od_std/np.sqrt(len(row_list)-2)
 
-    fig,ax = plt.subplots()
+    # fig,ax = plt.subplots()
 
     dilutions_str = []
     dilutions = []
@@ -68,9 +68,9 @@ def run():
     dilutions[-1] = 0
     dilutions_str[-1] = '0x'
 
-    ax.errorbar(dilutions_str[1:],od_avg[1:],yerr=od_err[1:],fmt='x',capsize=5,color='k')
+    # ax.errorbar(dilutions_str[1:],od_avg[1:],yerr=od_err[1:],fmt='x',capsize=5,color='k')
     # ax.errorbar(dilutions_str,od_avg,yerr=od_err,fmt='x',capsize=5,color='k')
-    ax.set_yscale('log')
+    # ax.set_yscale('log')
 
     #%%
 
@@ -338,6 +338,6 @@ def run():
     #     pickle.dump(rfu_to_dilution,f)
     return rfu_to_dilution
 
-if __name__ == '__main__':
-    run()
 # %%
+if __name__ == "__main__":
+    rfu_to_dilution = run()

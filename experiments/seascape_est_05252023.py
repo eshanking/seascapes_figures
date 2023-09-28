@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import scipy.optimize as sciopt
 import scipy.stats as stats
+import pandas as pd
 
 # reminder: col 12 is the background condition
 
@@ -106,10 +107,6 @@ for pp in plate_paths:
     row = int(np.floor(count/4))
     col = int(np.mod(count,4))
 
-    # ax = ax_list[row,col]
-
-    # fig,ax = plt.subplots()
-
     data_paths0 = get_data_file_paths(pp)
 
     timeseries_dict = {}
@@ -143,6 +140,7 @@ for pp in plate_paths:
                 else:
                     od = data_dict[key] - bg_est
                     timeseries_dict[key] = [od]
+                
         timeseries_dict['Time'].append(t)
 
     # sort out time
@@ -153,6 +151,64 @@ for pp in plate_paths:
     timeseries_dicts.append(timeseries_dict)
 
 #%% visualize od data
+
+cmap = mpl.cm.get_cmap('viridis')
+
+drugless_mean_trace = []
+
+for i in range(len(timeseries_dicts)):
+
+    ts_dict = timeseries_dicts[i]
+    time = np.array(ts_dict['Time'])/60
+    
+    fig,ax = plt.subplots(nrows=3,ncols=4,sharex=True,sharey=True,figsize=(10,8))
+    ax_list = ax.flatten()
+
+    for j in range(len(col_list)):
+
+        ts_list = []
+
+        ax = ax_list[j]
+        ts_t = np.zeros((len(ts_dict['Time']),8))
+        col = col_list[j]
+        auc_list = []
+        for k in range(len(row_list)):
+            row = row_list[k]
+            key = row+col
+            if key in ts_dict.keys():
+                ts_t[:,k] = ts_dict[key]
+                ax.plot(time,ts_t,color='k',alpha=0.5)
+                ts_list.append(ts_t[:,k])
+        mean_ts = np.mean(ts_t,axis=1)
+        if j == 10:
+            drugless_mean_trace.append(mean_ts)
+        ax.plot(time,mean_ts,color='r',linewidth=2)
+        ax.set_yscale('symlog',linthresh=0.01)
+        # ax.set_ylim(0,1)
+
+    yl = ax_list[0].get_ylim()
+    ax_list[0].set_ylim(0.1,yl[1])
+    fig.tight_layout()
+    fig.suptitle('genotype = ' + str(i),y=1.05)
+
+#%%
+
+fig,ax = plt.subplots(figsize=(5,5))
+
+cc = plotter.gen_color_cycler().by_key()
+# color = cc['color'][key]
+
+for i in range(len(drugless_mean_trace)):
+    color = cc['color'][i]
+    y = drugless_mean_trace[i]
+    y = np.array(y) - y[0]
+    ax.plot(time,y,color=color,label=i)
+
+# ax.set_yscale('symlog',linthresh=0.01)
+ax.legend(frameon=False,ncol=2)
+
+
+#%%
 cmap = mpl.cm.get_cmap('viridis')
 # fig,ax_list = plt.subplots(nrows=4,ncols=4,figsize=(15,12))
 
@@ -163,7 +219,7 @@ for i in range(len(timeseries_dicts)):
 # for i in range(1):
     # fig,ax_list = plt.subplots(nrows=3,ncols=4,sharex=True,sharey=True,figsize=(10,8))
     # ax_list = ax_list.flatten()
-    fig,ax = plt.subplots()
+    # fig,ax = plt.subplots()
     ts_dict = timeseries_dicts[i]
     time = np.array(ts_dict['Time'])/60
     
@@ -179,22 +235,16 @@ for i in range(len(timeseries_dicts)):
             key = row+col
             if key in ts_dict.keys():
                 ts_t[:,k] = ts_dict[key]
-                # auc_list.append(np.trapz(ts_t[:,k],ts_dict['Time']))
-                auc_list.append(np.trapz(ts_t[:,k],time))
-                # ax.plot(ts_dict['Time'],ts_t[:,k])
-        # ts_t = ts_t - np.min(ts_t) + 10**-10
+                y = ts_t[:,k]
+                y = np.array(y) - y[0]
+                # auc_list.append(np.trapz(ts_t[:,k],time))
+                auc_list.append(np.trapz(y,time))
+
         ts_avg = np.mean(ts_t,axis=1)
-        # ts_log = np.log10(ts_t)
-        # ts_log_avg = np.mean(ts_log,axis=1)
-        # ts_log_err = np.std(ts_log,axis=1)/np.sqrt(8)
         ts_err = np.std(ts_t,axis=1)/np.sqrt(8)
 
-        # ax.errorbar(ts_dict['Time'],ts_avg,yerr=ts_err,label=col,color=cmap(i/11))
-        # calculate AUC with ts_t
         auc_mean = np.mean(auc_list)
         auc_err = np.std(auc_list)/np.sqrt(8)
-        # auc_seascape_t = {'avg':np.mean(auc_list),'err':np.std(auc_list)/np.sqrt(8)}
-        # auc_seascape[col] = auc_seascape_t
 
         auc_v_dc.append(auc_mean)
         auc_v_dc_err.append(auc_err)
@@ -202,10 +252,10 @@ for i in range(len(timeseries_dicts)):
         if auc_mean > max_auc:
             max_auc = auc_mean
     
-    ax.errorbar(drug_conc[0:-1],auc_v_dc[0:-1],yerr=auc_v_dc_err[0:-1],fmt='o')
-    # fig.tight_layout()
-    fig.suptitle('genotype = ' + str(i),y=1.05)
-    ax.set_xscale('log')
+    # ax.errorbar(drug_conc[0:-1],auc_v_dc[0:-1],yerr=auc_v_dc_err[0:-1],fmt='o')
+    # # fig.tight_layout()
+    # fig.suptitle('genotype = ' + str(i),y=1.05)
+    # ax.set_xscale('log')
     
     auc_seascape_t = {'avg':auc_v_dc,'err':auc_v_dc_err}
     auc_seascape[i] = auc_seascape_t
@@ -337,7 +387,7 @@ fig8, ax_list = plt.subplots(ncols=2,figsize=(8,4))
 ax = ax_list[0]
 
 # wt_gr = seascape_lib['0']['g_drugless']
-gr_list_norm= g0_list/g0_list[0]
+gr_list_norm = g0_list/g0_list[0]
 
 ax.scatter(mut_list,gr_list_norm)
 
@@ -398,6 +448,7 @@ fig8.tight_layout()
 fig,ax = plt.subplots(figsize=(10,6))
 
 cc = plotter.gen_color_cycler().by_key()
+# color = cc['color'][key]
 # ax.set_prop_cycle(cc)
 
 drug_conc_plot = ['10^$' + str(round(np.log10(x),1)) + '$' for x in drug_conc[0:-2]]
@@ -433,5 +484,27 @@ ax.tick_params(axis='both', labelsize=12)
 ax.legend(title='genotype',fontsize=10,frameon=False,ncol=1,loc=(1,0.1))
 
 # %%
-mic_list = [0.088,1.4,0.063,32,0.13,3.6*10**2,0.18,3.6*10**2,0.088,23,1.4,
-            3.6*10**2,1.4,2.1*10**3,0.8,2.9*10**3]
+# mic_list = [0.088,1.4,0.063,32,0.13,3.6*10**2,0.18,3.6*10**2,0.088,23,1.4,
+#             3.6*10**2,1.4,2.1*10**3,0.8,2.9*10**3]
+
+data_old = pd.read_csv('data/ic50_v_gr.csv')
+gr_old = np.array(data_old['gr'])
+gr_old = gr_old/gr_old[0]
+
+fig,ax_list = plt.subplots(ncols=3,figsize=(10,3))
+
+ax = ax_list[0]
+ax.scatter(gr_list_norm,gr_old)
+
+diff = gr_list_norm - gr_old
+ax = ax_list[1]
+ax.scatter(mut_list,diff)
+
+ic50_old = np.array(data_old['ic50'])
+ic50_old = ic50_old - ic50_old[0]
+
+ax = ax_list[2]
+ax.scatter(ic50_list_norm,ic50_old)
+# %%
+
+
