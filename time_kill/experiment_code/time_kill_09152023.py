@@ -12,6 +12,7 @@ import pickle
 import pandas as pd
 import calibration_08302023 as cal
 
+# These functions help with sorting the file names in natural order
 def atoi(text):
     return int(text) if text.isdigit() else text
 
@@ -27,7 +28,10 @@ def natural_keys(text):
 #     rfu30_to_dilution = pickle.load(f)
 #     f.close()
 
+#%% Run calibration code
 rfu30_to_dilution = cal.run()
+
+#%% Load data
 
 plate1_path = '../experiment_data/tk_09152023/plate_1'
 plate2_path = '../experiment_data/tk_09152023/plate_2'
@@ -58,7 +62,7 @@ plates1,data1 = get_timeseries(plate1_path)
 plates2,data2 = get_timeseries(plate2_path)
 
 data = (data1,data2)
-#%%
+#%% Extract timeseries and estimate cell count
 
 # plate 1 row E,F,G: no drug
 # plate 1 row B,C,D: 10x MIC
@@ -117,7 +121,7 @@ for key in plate_layout:
 
 # ax.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
 
-# %%
+# %% Plot cell count over time
 
 fig,ax = plt.subplots()
 
@@ -141,7 +145,8 @@ ax.spines['right'].set_visible(False)
 ax.ticklabel_format(style='sci',scilimits=(0,0),axis='y')
 
 
-# %%
+# %% Estimate growth rate by curve fitting
+
 cmap = mpl.colormaps['viridis']
 
 def growth_diffeq(N,t,K,Kss,alpha,cc):
@@ -178,7 +183,8 @@ rate_err.append(np.sqrt(np.diag(pcov))[0])
 
 # plot fit
 
-fig,ax_list = plt.subplots(nrows=4,figsize=(4,10),sharex=True,sharey=False)
+fig,ax_list = plt.subplots(ncols=4,figsize=(8,2),sharex=True,sharey=False)
+# ax_list = ax_list.flatten()
 
 ax = ax_list[0]
 # ax.plot(x,y,'o',color='k',label='data')
@@ -237,20 +243,31 @@ net_rate = K - np.array(Kss_list)
 
 rate_err = np.array(rate_err)
 
-ax_list[-1].set_xlabel('Time (min)',fontsize=12)
-
 row_indx = 0
-
 for ax in ax_list:
-    ax.set_ylabel('log$_{10}$ Cell Count',fontsize=12)
+    ax.set_xlabel('Time (min)',fontsize=12)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.tick_params(axis='both',labelsize=12)
-
-    ax.annotate(str(drug_conc[row_indx]) + ' ug/mL',xy=(0.7,0.5),xycoords='axes fraction',fontsize=12)
+    # ax.annotate(str(drug_conc[row_indx]) + ' ug/mL',xy=(0.7,0.5),xycoords='axes fraction',fontsize=12)
+    ax.set_title(str(drug_conc[row_indx]) + ' ug/mL')
     row_indx += 1
+# row_indx = 0
 
+# for ax in ax_list:
+#     ax.set_ylabel('log$_{10}$ Cell Count',fontsize=12)
+#     ax.spines['top'].set_visible(False)
+#     ax.spines['right'].set_visible(False)
+#     ax.tick_params(axis='both',labelsize=12)
 
+#     ax.annotate(str(drug_conc[row_indx]) + ' ug/mL',xy=(0.7,0.5),xycoords='axes fraction',fontsize=12)
+#     row_indx += 1
+
+xticks = np.arange(0,np.max(xfit),90)
+ax_list[0].set_xticks(xticks)
+
+ax_list[0].set_ylabel('log$_{10}$ Cell Count',fontsize=12)
+
+fig.tight_layout()
 # %% Load previous results
 
 df = pd.read_csv('results_08312023.csv')
@@ -317,11 +334,6 @@ fig,ax = plt.subplots(figsize=(4,3))
 
 ax.plot(xfit,yfit*60,'-',linewidth=3)
 
-# ax.errorbar(drug_conc,rate*60,yerr=rate_err*60,color='k',
-#             label='09152023',capsize=3,fmt="D")
-# # ax.plot(prev_dc,prev_rate*60,'o',color='red',label='08312023')
-# ax.errorbar(prev_dc,prev_rate*60,yerr=prev_err,fmt='o',color='red',
-#             label='08312023',capsize=3)
 ax.scatter(drug_conc,rate*60,color='k',
             label='09152023',marker="D")
 
@@ -340,8 +352,7 @@ ax.set_ylabel('Net Growth Rate (h$^{-1}$)',fontsize=14)
 
 df = pd.DataFrame({'g_drugless':gmax*60,'gmin':gmin*60,'mic':mic,'k':k},index=[0])
 
-df.to_csv('../results/pharm_params_09152023.csv',index=False)
+# df.to_csv('../results/pharm_params_09152023.csv',index=False)
 
 # ax.set_xscale('symlog',linthresh=0.01)
 
-# %%
