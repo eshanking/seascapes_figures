@@ -131,6 +131,8 @@ def run():
     # sort data
     sort_indx = np.argsort(fluor_norm)
     fluor_norm = fluor_norm[sort_indx]
+    # cell_count_norm = cell_count_norm[sort_indx]
+    cell_count_norm = np.array(dilutions[1:])
     cell_count_norm = cell_count_norm[sort_indx]
 
     spline = interp.UnivariateSpline(fluor_norm,cell_count_norm,k=k,s=s)
@@ -148,7 +150,12 @@ def run():
         if background_subtracted == False:
             rfu30 = rfu30 - bg_est
         rfu30_norm = rfu30/fluor_avg[1]
-        return spline(rfu30_norm)*cell_count[1]
+
+        count = spline(rfu30_norm)*cell_count[1]
+
+        count[count < 0] = np.nan
+
+        return count
     
     return rfu30_to_cell_count
 
